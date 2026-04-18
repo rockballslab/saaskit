@@ -32,11 +32,11 @@ Two years ago, I knew nothing about servers, APIs, or self-hosting. I was paying
 
 **With SAASKIT, it takes you 15 minutes.**
 
-> [!NOTE]
-> SAASKIT is the setup I wish I had when I started.
+> [!IMPORTANT]
+> Instead of spending days reading Docker tutorials, chasing config files, and guessing which security settings actually matter — you get a production-ready, fully wired stack in 15 minutes.
+>
+> The same stack I use on my own servers, every day, for all my projects.
 
-
-Instead of spending days reading Docker tutorials, chasing config files, and guessing which security settings actually matter — you get a production-ready, fully wired stack in 15 minutes. The same stack I use on my own servers, every day, for all my projects.
 
 **My personal stack — tools I build, use, and share:**
 
