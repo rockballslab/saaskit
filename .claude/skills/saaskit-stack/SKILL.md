@@ -1,5 +1,5 @@
 ---
-name: saas-kit-stack
+name: saaskit-stack
 description: >
   Use this skill whenever working with the saas-kit self-hosted stack:
   n8n, Baserow, MinIO, PostgreSQL, Dragonfly, Redis, n8n-MCP.
