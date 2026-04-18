@@ -12,7 +12,7 @@ Built on top of [vps-secure](https://github.com/rockballslab/vps-secure) — fre
 
 Because the tools you already pay for every month have a free, production-grade, open-source equivalent — and they're better.
 
-| You probably pay for... | Self-hosted with saas-kit | Monthly savings |
+| You probably pay for... | Self-hosted with SAASKIT | Monthly savings |
 |---|---|---|
 | **Airtable** Pro ($20/user/mo) | **Baserow** — same no-code UX, unlimited rows, unlimited users | ~$60–200/mo |
 | **n8n Cloud** Starter ($20/mo, 5k executions) | **n8n** self-hosted — unlimited executions, unlimited workflows | ~$20–50/mo |
@@ -26,7 +26,7 @@ Because the tools you already pay for every month have a free, production-grade,
 
 ---
 
-## What is saas-kit?
+## What is SAASKIT?
 
 A single bash script that installs, wires, and secures a complete self-hosted SaaS infrastructure on your VPS in under 15 minutes.
 
@@ -39,7 +39,7 @@ sudo ./saaskit.sh install
 You answer two questions (domain + email). Everything else is generated automatically — passwords, encryption keys, reverse proxy config, TLS certificates.
 
 > [!NOTE]
-> saas-kit is designed to run **on top of vps-secure**. If your VPS is not hardened yet, start there first — it takes 15 minutes too. See [Prerequisites](#prerequisites).
+> SAASKIT is designed to run **on top of vps-secure**. If your VPS is not hardened yet, start there first — it takes 15 minutes too. See [Prerequisites](#prerequisites).
 
 ---
 
@@ -113,20 +113,20 @@ MinIO on your VPS:
 ### 1. Harden your VPS first with vps-secure
 
 > [!IMPORTANT]
-> **Do not expose this stack on a raw, unhardened VPS.** n8n, Baserow, and MinIO have web interfaces accessible from the internet. Before installing saas-kit, your VPS needs:
+> **Do not expose this stack on a raw, unhardened VPS.** n8n, Baserow, and MinIO have web interfaces accessible from the internet. Before installing SAASKIT, your VPS needs:
 > - A firewall (UFW configured)
 > - SSH hardening (key-based auth, non-standard port)
 > - Fail-safe Docker isolation
 >
-> **[vps-secure](https://github.com/rockballslab/vps-secure) handles all of this in 15 minutes.** It's the required foundation for saas-kit.
+> **[vps-secure](https://github.com/rockballslab/vps-secure) handles all of this in 15 minutes.** It's the required foundation for SAASKIT.
 
 ```bash
 # Step 1 — harden your VPS (takes ~15 min)
 curl -fsSL https://raw.githubusercontent.com/rockballslab/vps-secure/main/install.sh -o install.sh
 chmod +x install.sh && sudo ./install.sh
 
-# Step 2 — install saas-kit (takes ~5 min)
-curl -fsSL https://raw.githubusercontent.com/rockballslab/saas-kit/main/saaskit.sh -o saaskit.sh
+# Step 2 — install SAASKIT (takes ~5 min)
+curl -fsSL https://raw.githubusercontent.com/rockballslab/SAASKIT/main/saaskit.sh -o saaskit.sh
 chmod +x saaskit.sh && sudo ./saaskit.sh install
 ```
 
@@ -164,7 +164,7 @@ listmonk.<yourdomain.com>      → YOUR_VPS_IP   # only if installing Listmonk
 
 ```bash
 # Download first — never pipe unknown scripts directly to bash
-curl -fsSL https://raw.githubusercontent.com/rockballslab/saas-kit/main/saaskit.sh -o saaskit.sh
+curl -fsSL https://raw.githubusercontent.com/rockballslab/SAASKIT/main/saaskit.sh -o saaskit.sh
 chmod +x saaskit.sh
 sudo ./saaskit.sh install
 ```
@@ -177,7 +177,7 @@ The script is **fully interactive**. It asks two questions:
   Install Listmonk? (yes/no)     : 
 ```
 
-Everything else is generated automatically — database passwords, encryption keys, MCP authentication token. All credentials are saved to `/etc/vps-secure/saas-kit.conf` (readable only by root).
+Everything else is generated automatically — database passwords, encryption keys, MCP authentication token. All credentials are saved to `/etc/vps-secure/SAASKIT.conf` (readable only by root).
 
 ---
 
@@ -187,7 +187,7 @@ Everything else is generated automatically — database passwords, encryption ke
 [1/9] Prerequisites    — detects Docker, reverse proxy mode (inject or standalone)
 [2/9] Configuration    — prompts for domain + email, generates all secrets
 [3/9] DNS check        — verifies all subdomains resolve to this VPS
-[4/9] Environment      — creates /opt/saas-kit/, .env (chmod 600), init SQL
+[4/9] Environment      — creates /opt/SAASKIT/, .env (chmod 600), init SQL
 [5/9] docker-compose   — generates compose file with pinned image versions
 [6/9] Reverse proxy    — injects Caddy blocks (or creates standalone Caddyfile)
 [7/9] Containers       — pulls images, starts services in dependency order
@@ -196,10 +196,10 @@ Everything else is generated automatically — database passwords, encryption ke
 ```
 
 > [!NOTE]
-> **Reverse proxy detection is automatic.** If vps-secure is installed, saas-kit injects its routes into the existing Caddy instance (no port 80/443 conflict). If no proxy is found, a standalone Caddy is created inside the stack. You don't need to configure anything.
+> **Reverse proxy detection is automatic.** If vps-secure is installed, SAASKIT injects its routes into the existing Caddy instance (no port 80/443 conflict). If no proxy is found, a standalone Caddy is created inside the stack. You don't need to configure anything.
 
 > [!WARNING]
-> The script creates and writes to `/opt/saas-kit/`. If a previous installation is detected (`.env` exists), the script stops and asks you to run `update` or `uninstall` first. **It will not silently overwrite an existing installation.**
+> The script creates and writes to `/opt/SAASKIT/`. If a previous installation is detected (`.env` exists), the script stops and asks you to run `update` or `uninstall` first. **It will not silently overwrite an existing installation.**
 
 ---
 
@@ -224,7 +224,7 @@ sudo ./saaskit.sh keys    # displays all URLs and credentials
 ```
 
 > [!TIP]
-> Bookmark `https://n8n.<domain>`, `https://baserow.<domain>`, and `https://minio-console.<domain>` immediately after install. Your credentials are in `/etc/vps-secure/saas-kit.conf`.
+> Bookmark `https://n8n.<domain>`, `https://baserow.<domain>`, and `https://minio-console.<domain>` immediately after install. Your credentials are in `/etc/vps-secure/SAASKIT.conf`.
 
 ---
 
@@ -249,7 +249,7 @@ Once n8n-MCP is configured, add this to your `claude_desktop_config.json`:
 }
 ```
 
-Your MCP token is in `/etc/vps-secure/saas-kit.conf` → `MCP_TOKEN`.
+Your MCP token is in `/etc/vps-secure/SAASKIT.conf` → `MCP_TOKEN`.
 
 > [!NOTE]
 > With this setup, you can tell Claude: *"Create an n8n workflow that sends a Slack message when a new row is added to Baserow."* — Claude writes and deploys it directly via MCP. No copy-pasting, no JSON editing.
@@ -279,7 +279,7 @@ Your MCP token is in `/etc/vps-secure/saas-kit.conf` → `MCP_TOKEN`.
                     saaskit-postgres  dragonfly    redis       (listmonk)
 ```
 
-All saas-kit containers communicate on `saaskit-net`. Only n8n, Baserow, MinIO API, MinIO Console, and n8n-MCP are reachable from outside — only on `127.0.0.1`, proxied through Caddy with automatic HTTPS.
+All SAASKIT containers communicate on `saaskit-net`. Only n8n, Baserow, MinIO API, MinIO Console, and n8n-MCP are reachable from outside — only on `127.0.0.1`, proxied through Caddy with automatic HTTPS.
 
 ---
 
@@ -301,7 +301,7 @@ sudo ./saaskit.sh uninstall           # clean uninstall (asks confirmation)
 ### Docker commands
 
 ```bash
-cd /opt/saas-kit
+cd /opt/SAASKIT
 
 docker compose ps                     # container status
 docker compose logs -f n8n            # live logs for n8n
@@ -319,11 +319,11 @@ docker compose down && docker compose --env-file .env up -d  # full restart
 1. **PostgreSQL dump** — all databases (`n8n_db`, `baserow_db`, + `listmonk_db` if installed), compressed with gzip
 2. **Volume backup** — n8n workflows + credentials, MinIO data
 
-Backups are stored in `/opt/saas-kit/backups/` and automatically uploaded to your MinIO internal bucket.
+Backups are stored in `/opt/SAASKIT/backups/` and automatically uploaded to your MinIO internal bucket.
 
 ### External backup (optional)
 
-For off-VPS backup (Backblaze B2, Hetzner S3, etc.), create `/opt/saas-kit/backup-external.conf`:
+For off-VPS backup (Backblaze B2, Hetzner S3, etc.), create `/opt/SAASKIT/backup-external.conf`:
 
 ```bash
 BACKUP_EXTERNAL_ENDPOINT="https://s3.us-west-004.backblazeb2.com"
@@ -333,7 +333,7 @@ BACKUP_EXTERNAL_BUCKET="my-saaskit-backups"
 ```
 
 > [!IMPORTANT]
-> Backups older than 7 days are automatically deleted from the local `/opt/saas-kit/backups/` directory. Configure an external destination if you need longer retention.
+> Backups older than 7 days are automatically deleted from the local `/opt/SAASKIT/backups/` directory. Configure an external destination if you need longer retention.
 
 ---
 
@@ -342,22 +342,22 @@ BACKUP_EXTERNAL_BUCKET="my-saaskit-backups"
 After install, two template collections are available locally:
 
 ```
-/opt/saas-kit/templates/awesome-n8n-templates/   # 100+ ready-to-import workflows
-/opt/saas-kit/templates/n8n-skills/              # Claude Code skillset for n8n
+/opt/SAASKIT/templates/awesome-n8n-templates/   # 100+ ready-to-import workflows
+/opt/SAASKIT/templates/n8n-skills/              # Claude Code skillset for n8n
 ```
 
 **Import a workflow:** n8n UI → New workflow → ⋮ menu → Import from file → pick any `.json`.
 
 **Use n8n-skills with Claude Code:**
 ```bash
-cat /opt/saas-kit/templates/n8n-skills/SKILL.md
+cat /opt/SAASKIT/templates/n8n-skills/SKILL.md
 ```
 
 ---
 
 ## Claude Code integration
 
-This repo includes a `CLAUDE.md` (auto-loaded by Claude Code) and a skill at `.claude/skills/saas-kit-stack/SKILL.md`.
+This repo includes a `CLAUDE.md` (auto-loaded by Claude Code) and a skill at `.claude/skills/SAASKIT-stack/SKILL.md`.
 
 The skill auto-triggers when Claude Code is working in this project and provides:
 - Connection strings for all services
