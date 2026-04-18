@@ -12,6 +12,12 @@ Built on top of [vps-secure](https://github.com/rockballslab/vps-secure) - free,
 
 Because the tools you already pay for every month have a free, production-grade, open-source equivalent - and they're better.
 
+
+<p align="center">
+  <img src="./saaskit.png" alt="The essential Kit for Starters and Builders" width="100%">
+</p>
+
+
 | You probably pay for... | Self-hosted with SAASKIT | Monthly savings |
 |---|---|---|
 | **Airtable** Pro ($20/user/mo) | **Baserow** - same no-code UX, unlimited rows, unlimited users | ~$60–200/mo |
