@@ -1,112 +1,236 @@
-# SAASKIT
+# saas-kit
 
 **One-script SaaS stack installer for self-hosted indie builders.**
 
-n8n · Baserow · MinIO · PostgreSQL · Dragonfly · Claude Code
+> n8n · Baserow · MinIO · PostgreSQL · Dragonfly · Claude Code
 
-Built on top of [vps-secure](https://github.com/rockballslab/vps-secure). Free and open source.
+Built on top of [vps-secure](https://github.com/rockballslab/vps-secure) — free, open source, and yours forever.
 
 ---
 
-## What it installs
+## Why self-host your SaaS stack?
 
-| Service | Role | URL |
+Because the tools you already pay for every month have a free, production-grade, open-source equivalent — and they're better.
+
+| You probably pay for... | Self-hosted with saas-kit | Monthly savings |
 |---|---|---|
-| **n8n** | Workflow automation | `https://n8n.<domain>` |
-| **n8n-MCP** | MCP server for Claude | `https://mcpn8n.<domain>` |
-| **Baserow** | No-code database | `https://baserow.<domain>` |
-| **MinIO** | S3-compatible object storage | `https://minio.<domain>` |
-| **PostgreSQL 16** | Shared relational database | internal |
-| **Dragonfly** | Redis-compatible cache (n8n) | internal |
-| **Redis 7** | Cache dedicated to Baserow | internal |
-| **Claude Code** | AI coding CLI | installed globally |
+| **Airtable** Pro ($20/user/mo) | **Baserow** — same no-code UX, unlimited rows, unlimited users | ~$60–200/mo |
+| **n8n Cloud** Starter ($20/mo, 5k executions) | **n8n** self-hosted — unlimited executions, unlimited workflows | ~$20–50/mo |
+| **AWS S3** (~$25/mo for 100GB + requests) | **MinIO** — S3-compatible, on your VPS, zero storage fees | ~$25/mo |
+| **AWS RDS** PostgreSQL (db.t3.micro: ~$15/mo) | **PostgreSQL 16** — shared between all services | ~$15/mo |
+| **Zapier** Pro ($49/mo) | Replaced by n8n self-hosted (see above) | — |
+| **Make** Core ($9/mo) | Replaced by n8n self-hosted | — |
 
-Plus **100+ n8n workflow templates** and the **n8n-skills** Claude Code skillset, cloned locally.
+> [!IMPORTANT]
+> **At current cloud pricing, this stack replaces $80 to $300/month of SaaS costs.** Your VPS costs $5–20/month. The math is obvious.
+
+---
+
+## What is saas-kit?
+
+A single bash script that installs, wires, and secures a complete self-hosted SaaS infrastructure on your VPS in under 15 minutes.
+
+No Docker knowledge required. No manual config. One command.
+
+```bash
+sudo ./saaskit.sh install
+```
+
+You answer two questions (domain + email). Everything else is generated automatically — passwords, encryption keys, reverse proxy config, TLS certificates.
+
+> [!NOTE]
+> saas-kit is designed to run **on top of vps-secure**. If your VPS is not hardened yet, start there first — it takes 15 minutes too. See [Prerequisites](#prerequisites).
+
+---
+
+## What you get
+
+| Service | What it does | Open-source alternative to |
+|---|---|---|
+| **[n8n](https://n8n.io)** | Visual workflow automation — APIs, webhooks, AI agents | Zapier, Make, n8n Cloud |
+| **[n8n-MCP](https://github.com/czlonkowski/n8n-mcp)** | MCP server — lets Claude control your n8n workflows | — |
+| **[Baserow](https://baserow.io)** | No-code database with a spreadsheet-like UI | Airtable, Notion databases |
+| **[MinIO](https://min.io)** | S3-compatible object storage — files, backups, assets | AWS S3, Cloudflare R2 |
+| **[PostgreSQL 16](https://postgresql.org)** | Production-grade relational database, shared by all services | AWS RDS, Supabase |
+| **[Dragonfly](https://dragonflydb.io)** | Redis-compatible cache, 25× faster than Redis | Redis Cloud |
+| **[Redis 7](https://redis.io)** | Cache dedicated to Baserow | Redis Cloud |
+| **[Claude Code](https://claude.ai/code)** | AI coding CLI, pre-connected to your stack via MCP | GitHub Copilot, Cursor |
+
+**Bonus:** 100+ n8n workflow templates + the n8n-skills Claude Code skillset — cloned locally at install.
+
+---
+
+## Why n8n over Zapier or Make?
+
+> [!TIP]
+> **The killer feature of self-hosted n8n: unlimited executions.** Zapier Pro at $49/month gives you 2,000 tasks. n8n self-hosted gives you infinite — for the cost of your VPS.
+
+- **Zapier** charges per *task* (each action in a workflow). A workflow with 5 steps that runs 1,000 times = 5,000 tasks. That's $50/month on the Pro plan.
+- **Make** is cheaper but still caps by *operations* (each module execution).
+- **n8n self-hosted** runs on your server. 10 million executions? Same cost.
+
+n8n also has a built-in **AI Agent node** — you can wire Claude, GPT-4, or your local Ollama directly into your automations without a separate AI platform.
+
+---
+
+## Why Baserow over Airtable?
+
+> [!TIP]
+> **Airtable's free tier limits you to 1,200 rows per base.** A serious project hits that in a week. Baserow self-hosted has no row limit, no user limit, no base limit.
+
+| Feature | Airtable Free | Airtable Pro ($20/user/mo) | Baserow self-hosted |
+|---|---|---|---|
+| Rows per base | 1,200 | 50,000 | **Unlimited** |
+| Users | 5 | Unlimited | **Unlimited** |
+| API access | ✅ | ✅ | ✅ |
+| Automations | Limited | ✅ | ✅ |
+| Monthly cost | $0 | $20/user | **$0** |
+| Your data stays yours | ❌ | ❌ | **✅** |
+
+Baserow uses a standard PostgreSQL backend — your data is in a real database you own and can query directly.
+
+---
+
+## Why MinIO over AWS S3?
+
+AWS S3 looks cheap per GB ($0.023/GB/month) but the costs add up fast:
+- Data transfer OUT: $0.09/GB
+- PUT/GET requests: billed per 1,000 operations
+- A media-heavy app can easily hit $50–100/month
+
+MinIO on your VPS:
+- **Storage**: unlimited (bound by your VPS disk)
+- **Bandwidth**: included in your VPS plan
+- **API**: 100% S3-compatible — any tool that works with S3 works with MinIO, zero code changes
+
+> [!NOTE]
+> Your existing AWS S3 code works with MinIO without modification. Change the endpoint URL and credentials in your `.env`. That's it.
 
 ---
 
 ## Prerequisites
 
-- Ubuntu 24.04 LTS VPS
-- [vps-secure](https://github.com/rockballslab/vps-secure) installed (`install-secure.sh` + `install-dashboard.sh`)
-- DNS A records pointing to your VPS for all subdomains:
+### 1. Harden your VPS first with vps-secure
+
+> [!IMPORTANT]
+> **Do not expose this stack on a raw, unhardened VPS.** n8n, Baserow, and MinIO have web interfaces accessible from the internet. Before installing saas-kit, your VPS needs:
+> - A firewall (UFW configured)
+> - SSH hardening (key-based auth, non-standard port)
+> - Fail-safe Docker isolation
+>
+> **[vps-secure](https://github.com/rockballslab/vps-secure) handles all of this in 15 minutes.** It's the required foundation for saas-kit.
+
+```bash
+# Step 1 — harden your VPS (takes ~15 min)
+curl -fsSL https://raw.githubusercontent.com/rockballslab/vps-secure/main/install.sh -o install.sh
+chmod +x install.sh && sudo ./install.sh
+
+# Step 2 — install saas-kit (takes ~5 min)
+curl -fsSL https://raw.githubusercontent.com/rockballslab/saas-kit/main/saaskit.sh -o saaskit.sh
+chmod +x saaskit.sh && sudo ./saaskit.sh install
+```
+
+### 2. Server requirements
+
+| Requirement | Minimum | Recommended |
+|---|---|---|
+| OS | Ubuntu 24.04 LTS | Ubuntu 24.04 LTS |
+| RAM | 8 GB | **16 GB** |
+| Disk | 20 GB | 50 GB+ |
+| CPU | 2 vCPU | 4 vCPU |
+
+> [!NOTE]
+> Tested on Hostinger KVM2 (16GB RAM, 8 vCPU, 200GB NVMe). Total install time: ~8 minutes.
+
+### 3. DNS records (required before install)
+
+Point all subdomains to your VPS IP **before** running the script. The installer checks DNS and will warn you if records are missing.
 
 ```
-n8n.<domain>          → VPS IP
-mcpn8n.<domain>       → VPS IP
-baserow.<domain>      → VPS IP
-minio.<domain>        → VPS IP
-minio-console.<domain> → VPS IP
+n8n.<yourdomain.com>           → YOUR_VPS_IP
+mcpn8n.<yourdomain.com>        → YOUR_VPS_IP
+baserow.<yourdomain.com>       → YOUR_VPS_IP
+minio.<yourdomain.com>         → YOUR_VPS_IP
+minio-console.<yourdomain.com> → YOUR_VPS_IP
+listmonk.<yourdomain.com>      → YOUR_VPS_IP   # only if installing Listmonk
 ```
 
-- Minimum **8GB RAM** recommended (16GB comfortable)
+> [!TIP]
+> DNS propagation takes 0–48 hours depending on your registrar. Most modern registrars (Cloudflare, Namecheap) propagate within 1–5 minutes.
 
 ---
 
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rockballslab/saas-kit/main/setup.sh | sudo bash
+# Download first — never pipe unknown scripts directly to bash
+curl -fsSL https://raw.githubusercontent.com/rockballslab/saas-kit/main/saaskit.sh -o saaskit.sh
+chmod +x saaskit.sh
+sudo ./saaskit.sh install
 ```
 
-Or clone and run:
+The script is **fully interactive**. It asks two questions:
+
+```
+  Domain root (ex: mydomain.com) : 
+  Admin email                    : 
+  Install Listmonk? (yes/no)     : 
+```
+
+Everything else is generated automatically — database passwords, encryption keys, MCP authentication token. All credentials are saved to `/etc/vps-secure/saas-kit.conf` (readable only by root).
+
+---
+
+## What the script does — step by step
+
+```
+[1/9] Prerequisites    — detects Docker, reverse proxy mode (inject or standalone)
+[2/9] Configuration    — prompts for domain + email, generates all secrets
+[3/9] DNS check        — verifies all subdomains resolve to this VPS
+[4/9] Environment      — creates /opt/saas-kit/, .env (chmod 600), init SQL
+[5/9] docker-compose   — generates compose file with pinned image versions
+[6/9] Reverse proxy    — injects Caddy blocks (or creates standalone Caddyfile)
+[7/9] Containers       — pulls images, starts services in dependency order
+[8/9] n8n templates    — clones 100+ workflow templates + n8n-skills locally
+[9/9] Claude Code CLI  — installs Node.js + @anthropic-ai/claude-code globally
+```
+
+> [!NOTE]
+> **Reverse proxy detection is automatic.** If vps-secure is installed, saas-kit injects its routes into the existing Caddy instance (no port 80/443 conflict). If no proxy is found, a standalone Caddy is created inside the stack. You don't need to configure anything.
+
+> [!WARNING]
+> The script creates and writes to `/opt/saas-kit/`. If a previous installation is detected (`.env` exists), the script stops and asks you to run `update` or `uninstall` first. **It will not silently overwrite an existing installation.**
+
+---
+
+## Post-install (required steps)
+
+### Step 1 — Configure n8n-MCP (required to use Claude with n8n)
 
 ```bash
-git clone https://github.com/rockballslab/saas-kit.git
-cd saas-kit
-sudo ./setup.sh
+# In the n8n UI: Settings → API → Create API Key
+# Then:
+sudo saaskit-mcp-apikey.sh <your-n8n-api-key>
 ```
 
-The script is fully interactive. It will ask for:
-- Your root domain (e.g. `mydomain.com`)
-- Admin email
-- Passwords for n8n, Baserow, MinIO (or auto-generate them)
+### Step 2 — Create your Baserow admin account
 
-Everything else (Postgres password, encryption keys, MCP token) is auto-generated.
+Baserow does not auto-create accounts on first run. Open `https://baserow.<domain>` and register with your admin email.
 
----
-
-## What the script does
-
-```
-[1/8] Configuration        — interactive prompts, generates all secrets
-[2/8] DNS verification     — checks all subdomains resolve to this VPS
-[3/8] Environment          — creates /opt/saas-kit/, .env, init SQL
-[4/8] docker-compose.yml   — generates compose file from template
-[5/8] Caddy                — injects reverse proxy blocks into vps-monitor Caddyfile
-[6/8] Containers           — pulls images, starts services in dependency order
-[7/8] n8n templates        — clones awesome-n8n-templates + n8n-skills
-[8/8] Claude Code          — installs Node.js 22 + @anthropic/claude-code globally
-```
-
-All generated files land in `/opt/saas-kit/`. All credentials are saved to `/etc/vps-secure/saas-kit.conf` (chmod 600).
-
----
-
-## Post-install (required)
-
-### 1. Configure n8n-MCP API key
-
-n8n-MCP needs a key to communicate with n8n. Generate one in the n8n UI, then:
+### Step 3 — Verify all services
 
 ```bash
-# In n8n: Settings → API → Create API Key
-sudo saaskit-mcp-apikey.sh <your-api-key>
+sudo ./saaskit.sh keys    # displays all URLs and credentials
 ```
 
-### 2. Create Baserow admin account
-
-Baserow does not auto-create accounts. Go to `https://baserow.<domain>` and register with your admin email.
-
-### 3. Verify MinIO
-
-Go to `https://minio-console.<domain>` and log in with `admin` / your MinIO password.
+> [!TIP]
+> Bookmark `https://n8n.<domain>`, `https://baserow.<domain>`, and `https://minio-console.<domain>` immediately after install. Your credentials are in `/etc/vps-secure/saas-kit.conf`.
 
 ---
 
-## Connect Claude Desktop to n8n-MCP
+## Connect Claude Desktop to your n8n via MCP
 
-Add to your `claude_desktop_config.json`:
+Once n8n-MCP is configured, add this to your `claude_desktop_config.json`:
 
 ```json
 {
@@ -116,7 +240,7 @@ Add to your `claude_desktop_config.json`:
       "args": ["n8n-mcp"],
       "env": {
         "MCP_MODE": "http",
-        "N8N_API_URL": "https://mcpn8n.<domain>",
+        "MCP_SERVER_URL": "https://mcpn8n.<yourdomain.com>",
         "AUTH_TOKEN": "<your-mcp-token>",
         "LOG_LEVEL": "error"
       }
@@ -125,74 +249,106 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-MCP token is in `/etc/vps-secure/saas-kit.conf`.
+Your MCP token is in `/etc/vps-secure/saas-kit.conf` → `MCP_TOKEN`.
+
+> [!NOTE]
+> With this setup, you can tell Claude: *"Create an n8n workflow that sends a Slack message when a new row is added to Baserow."* — Claude writes and deploys it directly via MCP. No copy-pasting, no JSON editing.
 
 ---
 
 ## Architecture
 
 ```
-                    Internet
-                       │
-              vps-monitor-caddy
-              (network_mode:host)
-                       │
-        ┌──────────────┼──────────────┐
-        │              │              │
-   127.0.0.1:5678  127.0.0.1:5680  127.0.0.1:9000
-        │              │              │
-    saaskit-n8n   saaskit-baserow  saaskit-minio
-        │              │
-        └──────┬────────┘
-               │  saaskit-net (bridge)
-        ┌──────┼──────┐
-        │      │      │
-   postgres  dragonfly  redis
+                       Internet
+                          │
+                   [Caddy / TLS]
+              (vps-monitor-caddy or saaskit-caddy)
+                          │
+         ┌────────────────┼────────────────┐
+         │                │                │
+  127.0.0.1:5678   127.0.0.1:5680   127.0.0.1:9000
+         │                │                │
+    saaskit-n8n    saaskit-baserow    saaskit-minio
+         │
+  127.0.0.1:5679
+         │
+   saaskit-n8n-mcp
+         │
+         └────────────── saaskit-net (Docker bridge) ──────────────┐
+                          │             │             │             │
+                    saaskit-postgres  dragonfly    redis       (listmonk)
 ```
 
-All saas-kit containers communicate internally on `saaskit-net`. Only n8n, Baserow, MinIO, and n8n-MCP are exposed on `127.0.0.1` for Caddy to proxy.
+All saas-kit containers communicate on `saaskit-net`. Only n8n, Baserow, MinIO API, MinIO Console, and n8n-MCP are reachable from outside — only on `127.0.0.1`, proxied through Caddy with automatic HTTPS.
 
 ---
 
-## Useful commands
+## Commands
+
+```bash
+sudo ./saaskit.sh install             # install the full stack
+sudo ./saaskit.sh keys                # display all URLs and credentials
+sudo ./saaskit.sh backup              # full backup (PostgreSQL + volumes → MinIO)
+sudo ./saaskit.sh backup --postgres   # PostgreSQL only
+sudo ./saaskit.sh backup --volumes    # volumes only
+sudo ./saaskit.sh backup --list       # list local backups
+sudo ./saaskit.sh update              # update all Docker images
+sudo ./saaskit.sh update n8n          # update a single service
+sudo ./saaskit.sh update --check      # check available updates (dry run)
+sudo ./saaskit.sh uninstall           # clean uninstall (asks confirmation)
+```
+
+### Docker commands
 
 ```bash
 cd /opt/saas-kit
 
-# Status
-docker compose ps
-
-# Logs
-docker compose logs -f n8n
-docker compose logs -f baserow
-
-# Restart a service
-docker compose restart n8n
-
-# Full restart
-docker compose down && docker compose --env-file .env up -d
-
-# Read credentials
-grep N8N_PASSWORD /etc/vps-secure/saas-kit.conf | cut -d'"' -f2
-
-# Reconfigure n8n-MCP after API key change
-sudo saaskit-mcp-apikey.sh <new-key>
+docker compose ps                     # container status
+docker compose logs -f n8n            # live logs for n8n
+docker compose logs -f baserow        # live logs for Baserow
+docker compose restart n8n            # restart a service
+docker compose down && docker compose --env-file .env up -d  # full restart
 ```
 
 ---
 
-## n8n templates
+## Backup
+
+`saaskit.sh backup` does two things:
+
+1. **PostgreSQL dump** — all databases (`n8n_db`, `baserow_db`, + `listmonk_db` if installed), compressed with gzip
+2. **Volume backup** — n8n workflows + credentials, MinIO data
+
+Backups are stored in `/opt/saas-kit/backups/` and automatically uploaded to your MinIO internal bucket.
+
+### External backup (optional)
+
+For off-VPS backup (Backblaze B2, Hetzner S3, etc.), create `/opt/saas-kit/backup-external.conf`:
+
+```bash
+BACKUP_EXTERNAL_ENDPOINT="https://s3.us-west-004.backblazeb2.com"
+BACKUP_EXTERNAL_ACCESS_KEY="your-access-key"
+BACKUP_EXTERNAL_SECRET_KEY="your-secret-key"
+BACKUP_EXTERNAL_BUCKET="my-saaskit-backups"
+```
+
+> [!IMPORTANT]
+> Backups older than 7 days are automatically deleted from the local `/opt/saas-kit/backups/` directory. Configure an external destination if you need longer retention.
+
+---
+
+## n8n workflow templates
 
 After install, two template collections are available locally:
 
 ```
-/opt/saas-kit/templates/awesome-n8n-templates/   # 100+ workflow JSON files
+/opt/saas-kit/templates/awesome-n8n-templates/   # 100+ ready-to-import workflows
 /opt/saas-kit/templates/n8n-skills/              # Claude Code skillset for n8n
 ```
 
-Import a workflow: n8n UI → New workflow → ⋮ → Import from file.
+**Import a workflow:** n8n UI → New workflow → ⋮ menu → Import from file → pick any `.json`.
 
-To use n8n-skills with Claude Code, point to the skill:
+**Use n8n-skills with Claude Code:**
 ```bash
 cat /opt/saas-kit/templates/n8n-skills/SKILL.md
 ```
@@ -201,42 +357,46 @@ cat /opt/saas-kit/templates/n8n-skills/SKILL.md
 
 ## Claude Code integration
 
-This repo includes a `CLAUDE.md` (loaded automatically by Claude Code) and a skill at `.claude/skills/saas-kit-stack/SKILL.md`.
+This repo includes a `CLAUDE.md` (auto-loaded by Claude Code) and a skill at `.claude/skills/saas-kit-stack/SKILL.md`.
 
-The skill auto-triggers when working with any saas-kit service and provides:
-- Inter-service connection strings
-- PostgreSQL and MinIO commands
+The skill auto-triggers when Claude Code is working in this project and provides:
+- Connection strings for all services
+- PostgreSQL and MinIO quick commands
 - Credential reading patterns
-- Known gotchas (Dragonfly/Lua, n8n uid, MinIO path style...)
+- Known gotchas (Dragonfly/Lua compatibility, n8n UID 1000, MinIO path-style S3...)
 
 ---
 
-## Stack ports reference
+## Ports reference
 
-| Service | Host port | Notes |
-|---|---|---|
-| n8n | 5678 | Official n8n port |
-| n8n-MCP | 5679 | |
-| Baserow | 5680 | |
-| MinIO API | 9000 | Standard S3 port |
-| MinIO Console | 9001 | Standard MinIO console port |
-| PostgreSQL | internal | Container name: `postgres` |
-| Dragonfly | internal | Container name: `dragonfly` |
-| Redis | internal | Container name: `redis` |
+| Service | Host binding | Port | Notes |
+|---|---|---|---|
+| n8n | 127.0.0.1 | 5678 | Proxied by Caddy |
+| n8n-MCP | 127.0.0.1 | 5679 | Proxied by Caddy |
+| Baserow | 127.0.0.1 | 5680 | Proxied by Caddy |
+| MinIO API | 127.0.0.1 | 9000 | S3-compatible endpoint |
+| MinIO Console | 127.0.0.1 | 9001 | Admin UI |
+| Listmonk | 127.0.0.1 | 5682 | Optional, if installed |
+| PostgreSQL | internal only | 5432 | Not exposed externally |
+| Dragonfly | internal only | 6379 | Not exposed externally |
+| Redis | internal only | 6379 | Not exposed externally |
+
+> [!WARNING]
+> No service is bound to `0.0.0.0`. Everything is either internal (`saaskit-net`) or bound to `127.0.0.1` and proxied by Caddy with TLS. **Never manually expose PostgreSQL, Dragonfly, or Redis on a public port.**
 
 ---
 
 ## Built with
 
-- [vps-secure](https://github.com/rockballslab/vps-secure) — VPS hardening baseline
-- [n8n](https://n8n.io) — workflow automation
-- [n8n-mcp](https://github.com/czlonkowski/n8n-mcp) — MCP server by czlonkowski
-- [Baserow](https://baserow.io) — open source no-code database
+- [vps-secure](https://github.com/rockballslab/vps-secure) — VPS hardening baseline (required)
+- [n8n](https://n8n.io) — workflow automation platform
+- [n8n-mcp](https://github.com/czlonkowski/n8n-mcp) — MCP server for n8n by @czlonkowski
+- [Baserow](https://baserow.io) — open-source no-code database
 - [MinIO](https://min.io) — S3-compatible object storage
 - [PostgreSQL](https://postgresql.org) — relational database
-- [DragonflyDB](https://dragonflydb.io) — Redis-compatible cache
-- [Caddy](https://caddyserver.com) — reverse proxy (via vps-secure)
-- [awesome-n8n-templates](https://github.com/enescingoz/awesome-n8n-templates) — n8n workflow templates
+- [DragonflyDB](https://dragonflydb.io) — Redis-compatible in-memory store
+- [Caddy](https://caddyserver.com) — automatic HTTPS reverse proxy
+- [awesome-n8n-templates](https://github.com/enescingoz/awesome-n8n-templates) — community workflow templates
 - [n8n-skills](https://github.com/czlonkowski/n8n-skills) — Claude Code skillset for n8n
 
 ---
