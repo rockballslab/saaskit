@@ -1,4 +1,4 @@
-# saas-kit
+# SAASKIT
 
 **One-script SaaS stack installer for self-hosted indie builders.**
 
