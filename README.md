@@ -49,6 +49,60 @@ Instead of spending days reading Docker tutorials, chasing config files, and gue
 
 ---
 
+## Why self-host your SaaS stack?
+
+Because the tools you already pay for every month have a free, production-grade, open-source equivalent — and they're better.
+
+| You probably pay for... | Self-hosted with SAASKIT | Monthly savings |
+|---|---|---|
+| **Airtable** Pro ($20/user/mo) | **Baserow** — same no-code UX, unlimited rows, unlimited users | ~$60–200/mo |
+| **n8n Cloud** ($20/mo, 5k executions) | **n8n** self-hosted — unlimited executions, unlimited workflows | ~$20–50/mo |
+| **AWS S3** (~$25/mo for 100GB + requests) | **MinIO** — S3-compatible, on your VPS, zero storage fees | ~$25/mo |
+| **AWS RDS** PostgreSQL (db.t3.micro: ~$15/mo) | **PostgreSQL 16** — shared between all services | ~$15/mo |
+| **Zapier** Pro ($49/mo) | Replaced by n8n self-hosted | ~$49/mo |
+| **Make** Core ($9/mo) | Replaced by n8n self-hosted | ~$9/mo |
+
+> [!IMPORTANT]
+> **At current cloud pricing, this stack replaces $80 to $300/month of SaaS costs.** Your VPS costs $5–20/month. The math is obvious.
+
+### Why n8n over Zapier or Make?
+
+> [!TIP]
+> **The killer feature of self-hosted n8n: unlimited executions.** Zapier Pro at $49/month gives you 2,000 tasks. n8n self-hosted gives you infinite — for the cost of your VPS.
+
+- **Zapier** charges per *task* (each action in a workflow). A workflow with 5 steps that runs 1,000 times = 5,000 tasks. That's $50/month on the Pro plan.
+- **Make** is cheaper but still caps by *operations* (each module execution).
+- **n8n self-hosted** runs on your server. 10 million executions? Same cost.
+
+n8n also has a built-in **AI Agent node** — you can wire Claude, GPT-4, or your local Ollama directly into your automations without a separate AI platform.
+
+### Why Baserow over Airtable?
+
+> [!TIP]
+> **Airtable's free tier limits you to 1,200 rows per base.** A serious project hits that in a week. Baserow self-hosted has no row limit, no user limit, no base limit.
+
+| Feature | Airtable Free | Airtable Pro ($20/user/mo) | Baserow self-hosted |
+|---|---|---|---|
+| Rows per base | 1,200 | 50,000 | **Unlimited** |
+| Users | 5 | Unlimited | **Unlimited** |
+| API access | ✅ | ✅ | ✅ |
+| Automations | Limited | ✅ | ✅ |
+| Monthly cost | $0 | $20/user | **$0** |
+| Your data stays yours | ❌ | ❌ | **✅** |
+
+Baserow uses a standard PostgreSQL backend — your data is in a real database you own and can query directly.
+
+### Why MinIO over AWS S3?
+
+AWS S3 looks cheap per GB ($0.023/GB/month) but the costs add up fast: data transfer OUT at $0.09/GB, PUT/GET requests billed per 1,000 operations — a media-heavy app can easily hit $50–100/month.
+
+MinIO on your VPS: unlimited storage (bound by your disk), bandwidth included in your VPS plan, 100% S3-compatible API.
+
+> [!NOTE]
+> Your existing AWS S3 code works with MinIO without modification. Change the endpoint URL and credentials in your `.env`. That's it.
+
+---
+
 
 ## Quick start
 
@@ -255,59 +309,6 @@ n8n-MCP uses the standard HTTP+SSE transport. Any MCP-compatible client works:
 | **Windsurf** | Same JSON config as Claude Desktop |
 | **Custom agent** | `MCP_SERVER_URL` + `AUTH_TOKEN` headers |
 
----
-
-## Why self-host your SaaS stack?
-
-Because the tools you already pay for every month have a free, production-grade, open-source equivalent — and they're better.
-
-| You probably pay for... | Self-hosted with SAASKIT | Monthly savings |
-|---|---|---|
-| **Airtable** Pro ($20/user/mo) | **Baserow** — same no-code UX, unlimited rows, unlimited users | ~$60–200/mo |
-| **n8n Cloud** ($20/mo, 5k executions) | **n8n** self-hosted — unlimited executions, unlimited workflows | ~$20–50/mo |
-| **AWS S3** (~$25/mo for 100GB + requests) | **MinIO** — S3-compatible, on your VPS, zero storage fees | ~$25/mo |
-| **AWS RDS** PostgreSQL (db.t3.micro: ~$15/mo) | **PostgreSQL 16** — shared between all services | ~$15/mo |
-| **Zapier** Pro ($49/mo) | Replaced by n8n self-hosted | ~$49/mo |
-| **Make** Core ($9/mo) | Replaced by n8n self-hosted | ~$9/mo |
-
-> [!IMPORTANT]
-> **At current cloud pricing, this stack replaces $80 to $300/month of SaaS costs.** Your VPS costs $5–20/month. The math is obvious.
-
-### Why n8n over Zapier or Make?
-
-> [!TIP]
-> **The killer feature of self-hosted n8n: unlimited executions.** Zapier Pro at $49/month gives you 2,000 tasks. n8n self-hosted gives you infinite — for the cost of your VPS.
-
-- **Zapier** charges per *task* (each action in a workflow). A workflow with 5 steps that runs 1,000 times = 5,000 tasks. That's $50/month on the Pro plan.
-- **Make** is cheaper but still caps by *operations* (each module execution).
-- **n8n self-hosted** runs on your server. 10 million executions? Same cost.
-
-n8n also has a built-in **AI Agent node** — you can wire Claude, GPT-4, or your local Ollama directly into your automations without a separate AI platform.
-
-### Why Baserow over Airtable?
-
-> [!TIP]
-> **Airtable's free tier limits you to 1,200 rows per base.** A serious project hits that in a week. Baserow self-hosted has no row limit, no user limit, no base limit.
-
-| Feature | Airtable Free | Airtable Pro ($20/user/mo) | Baserow self-hosted |
-|---|---|---|---|
-| Rows per base | 1,200 | 50,000 | **Unlimited** |
-| Users | 5 | Unlimited | **Unlimited** |
-| API access | ✅ | ✅ | ✅ |
-| Automations | Limited | ✅ | ✅ |
-| Monthly cost | $0 | $20/user | **$0** |
-| Your data stays yours | ❌ | ❌ | **✅** |
-
-Baserow uses a standard PostgreSQL backend — your data is in a real database you own and can query directly.
-
-### Why MinIO over AWS S3?
-
-AWS S3 looks cheap per GB ($0.023/GB/month) but the costs add up fast: data transfer OUT at $0.09/GB, PUT/GET requests billed per 1,000 operations — a media-heavy app can easily hit $50–100/month.
-
-MinIO on your VPS: unlimited storage (bound by your disk), bandwidth included in your VPS plan, 100% S3-compatible API.
-
-> [!NOTE]
-> Your existing AWS S3 code works with MinIO without modification. Change the endpoint URL and credentials in your `.env`. That's it.
 
 ---
 
