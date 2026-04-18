@@ -7,8 +7,32 @@
 Built on top of [vps-secure](https://github.com/rockballslab/vps-secure) — free, open source, and yours forever.
 
 <p align="left">
-  <img src="./saaskit.png" alt="The essential Kit for Starters and Builders" width="90%">
+  <img src="./saaskit.png" alt="The essential Kit for Starters and Builders" width="100%">
 </p>
+
+---
+
+## About
+
+👋 Hi, I'm **Fabrice** — a French entrepreneur and serial SaaS builder.
+
+I've spent months launching products, and for too long I wasted time and money on cloud tools I didn't fully control — fighting billing surprises, hitting row limits, and wondering what SaaS companies were doing with my data.
+
+**SAASKIT is the setup I wish I had when I started.**
+
+Instead of spending days reading Docker tutorials, chasing config files, and guessing which security settings actually matter — you get a production-ready, fully wired stack in 15 minutes. The same stack I use on my own servers, every day, for all my projects.
+
+**My personal stack — tools I build, use, and share:**
+
+| Tool | What it does |
+|---|---|
+| 🔐 [vps-secure](https://github.com/rockballslab/vps-secure) | VPS hardening — the best security foundation. Install this first. |
+| ⚙️ **SAASKIT** | The self-hosted SaaS stack — you're here |
+| 🤖 *More coming* | AI agents, autonomous workflows, voice stack |
+
+**Zero Trust philosophy.** Every tool in this ecosystem follows one principle: *nothing is trusted by default, nothing is exposed without a reason*. No port open unless necessary. No service with more access than it needs. Your data stays on your server, under your control — not on someone else's cloud.
+
+> *"Eat your own dog food"* — I run this exact stack on my production servers.
 
 ---
 
@@ -403,29 +427,6 @@ The skill auto-triggers when Claude Code is working in this project and provides
 
 ---
 
-## About
-
-👋 Hi, I'm **Fabrice** — a French entrepreneur and serial SaaS builder.
-
-I've spent years launching products, and for too long I wasted time and money on cloud tools I didn't fully control — fighting billing surprises, hitting row limits, and wondering what SaaS companies were doing with my data.
-
-**SAASKIT is the setup I wish I had when I started.**
-
-Instead of spending days reading Docker tutorials, chasing config files, and guessing which security settings actually matter — you get a production-ready, fully wired stack in 15 minutes. The same stack I use on my own servers, every day, for all my projects.
-
-**My personal stack — tools I build, use, and share:**
-
-| Tool | What it does |
-|---|---|
-| 🔐 [vps-secure](https://github.com/rockballslab/vps-secure) | VPS hardening — the security foundation. Install this first. |
-| ⚙️ **SAASKIT** | The self-hosted SaaS stack — you're here |
-| 🤖 *More coming* | AI agents, autonomous workflows, voice stack |
-
-**Zero Trust philosophy.** Every tool in this ecosystem follows one principle: *nothing is trusted by default, nothing is exposed without a reason*. No port open unless necessary. No service with more access than it needs. Your data stays on your server, under your control — not on someone else's cloud.
-
-> *"Eat your own dog food"* — I run this exact stack on my production servers.
-
----
 
 ## Built with
 
