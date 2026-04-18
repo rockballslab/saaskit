@@ -14,7 +14,7 @@ Because the tools you already pay for every month have a free, production-grade,
 
 
 <p align="left">
-  <img src="./saaskit.png" alt="The essential Kit for Starters and Builders" width="80%">
+  <img src="./saaskit.png" alt="The essential Kit for Starters and Builders" width="90%">
 </p>
 
 
@@ -26,6 +26,7 @@ Because the tools you already pay for every month have a free, production-grade,
 | **AWS RDS** PostgreSQL (db.t3.micro: ~$15/mo) | **PostgreSQL 16** - shared between all services | ~$15/mo |
 | **Zapier** Pro ($49/mo) | Replaced by n8n self-hosted (see above) | - |
 | **Make** Core ($9/mo) | Replaced by n8n self-hosted | - |
+| **n8n cloud** Core ($20/mo) | Replaced by n8n self-hosted | - |
 
 > [!IMPORTANT]
 > **At current cloud pricing, this stack replaces $80 to $300/month of SaaS costs.** Your VPS costs $5–20/month. The math is obvious.
