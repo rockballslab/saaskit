@@ -18,7 +18,7 @@ Built on top of [VPS-SECURE](https://github.com/rockballslab/VPS-SECURE) — fre
 
 Two years ago, I knew nothing about servers, APIs, or self-hosting. I was paying for a dozen SaaS tools, hitting limits every other week, and had zero control over my own data. Today I run a production stack that costs almost nothing, depends on no one, and I own every byte of it. It took me two years to get here. 
 
-> [!NOTE] With SAASKIT, it takes you 15 minutes.
+>[!NOTE] With SAASKIT, it takes you 15 minutes.
 
 **SAASKIT is the setup I wish I had when I started.**
 
