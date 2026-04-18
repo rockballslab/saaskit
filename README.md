@@ -40,11 +40,6 @@ Instead of spending days reading Docker tutorials, chasing config files, and gue
 
 ---
 
-<p align="left">
-  <img src="./VPS-SECURE(3).png" alt="VPS SECURE - Highly Recommanded" width="100%">
-</p>
-
----
 
 ## Quick start
 
