@@ -4,7 +4,7 @@
 
 > n8n · Baserow · MinIO · PostgreSQL · Dragonfly · Claude Code · MCP
 
-Built on top of [vps-secure](https://github.com/rockballslab/vps-secure) — free, open source, and yours forever.
+Built on top of [VPS-SECURE](https://github.com/rockballslab/VPS-SECURE) — free, open source, and yours forever.
 
 <p align="left">
   <img src="./saaskit.png" alt="The essential Kit for Starters and Builders" width="100%">
@@ -16,7 +16,9 @@ Built on top of [vps-secure](https://github.com/rockballslab/vps-secure) — fre
 
 👋 Hi, I'm **Fabrice** — a French entrepreneur and serial SaaS builder.
 
-I've spent months launching products, and for too long I wasted time and money on cloud tools I didn't fully control — fighting billing surprises, hitting row limits, and wondering what SaaS companies were doing with my data.
+Two years ago, I knew nothing about servers, APIs, or self-hosting. I was paying for a dozen SaaS tools, hitting limits every other week, and had zero control over my own data. Today I run a production stack that costs almost nothing, depends on no one, and I own every byte of it. It took me two years to get here. 
+
+With SAASKIT, it takes you 15 minutes.
 
 **SAASKIT is the setup I wish I had when I started.**
 
@@ -26,7 +28,7 @@ Instead of spending days reading Docker tutorials, chasing config files, and gue
 
 | Tool | What it does |
 |---|---|
-| 🔐 [vps-secure](https://github.com/rockballslab/vps-secure) | VPS hardening — the best security foundation. Install this first. |
+| 🔐 [VPS-SECURE](https://github.com/rockballslab/VPS-SECURE) | VPS hardening — one of the best full security foundation. Install this first. |
 | ⚙️ **SAASKIT** | The self-hosted SaaS stack — you're here |
 | 🤖 *More coming* | AI agents, autonomous workflows, voice stack |
 
@@ -40,7 +42,7 @@ Instead of spending days reading Docker tutorials, chasing config files, and gue
 
 ```bash
 # Step 1 — harden your VPS first (15 min)
-curl -fsSL https://raw.githubusercontent.com/rockballslab/vps-secure/main/install-secure.sh -o install-secure.sh
+curl -fsSL https://raw.githubusercontent.com/rockballslab/VPS-SECURE/main/install-secure.sh -o install-secure.sh
 chmod +x install-secure.sh && sudo ./install-secure.sh
 
 # Step 2 — install SAASKIT (5 min)
@@ -49,7 +51,7 @@ chmod +x saaskit.sh && sudo ./saaskit.sh install
 ```
 
 > [!IMPORTANT]
-> **vps-secure is required before SAASKIT.** It hardens your server (firewall, SSH, Docker isolation) in 15 minutes. Do not skip this step.
+> **VPS-SECURE is required before SAASKIT.** It hardens your server (firewall, SSH, Docker isolation) in 15 minutes. Do not skip this step.
 
 ---
 
@@ -59,7 +61,7 @@ chmod +x saaskit.sh && sudo ./saaskit.sh install
 |---|---|---|
 | **[n8n](https://n8n.io)** | Visual workflow automation — APIs, webhooks, AI agents | Zapier, Make, n8n Cloud |
 | **[n8n-MCP](https://github.com/czlonkowski/n8n-mcp)** | MCP server — lets Claude control your n8n workflows | — |
-| **[Baserow](https://baserow.io)** | No-code database with a spreadsheet-like UI | Airtable, Notion databases |
+| **[Baserow](https://baserow.io)** | No-code database with a spreadsheet-like UI | Airtable, Monday |
 | **[MinIO](https://min.io)** | S3-compatible object storage — files, backups, assets | AWS S3, Cloudflare R2 |
 | **[PostgreSQL 16](https://postgresql.org)** | Production-grade relational database, shared by all services | AWS RDS, Supabase |
 | **[Dragonfly](https://dragonflydb.io)** | Redis-compatible cache, 25× faster than Redis — dedicated to n8n | Redis Cloud |
@@ -73,7 +75,7 @@ chmod +x saaskit.sh && sudo ./saaskit.sh install
 ## Prerequisites
 
 > [!TIP]
-> **Complete beginner?** Don't worry — both vps-secure and SAASKIT are designed for exactly that. Follow the two steps below in order. Total time: ~30 minutes. You won't need to understand Docker, Nginx, or SSL certificates.
+> **Complete beginner?** Don't worry — both VPS-SECURE and SAASKIT are designed for exactly that. Follow the two steps below in order. Total time: ~30 minutes. You won't need to understand Docker, Nginx, or SSL certificates.
 
 ### Server requirements
 
@@ -115,7 +117,7 @@ The script is **fully interactive** and guides you at every step:
   Install Listmonk? (yes/no)     :
 ```
 
-Everything else is generated automatically — database passwords, encryption keys, MCP authentication token. All credentials are saved to `/etc/vps-secure/SAASKIT.conf` (readable only by root).
+Everything else is generated automatically — database passwords, encryption keys, MCP authentication token. All credentials are saved to `/etc/VPS-SECURE/SAASKIT.conf` (readable only by root).
 
 ### What the script does — step by step
 
@@ -132,7 +134,7 @@ Everything else is generated automatically — database passwords, encryption ke
 ```
 
 > [!NOTE]
-> **Reverse proxy detection is automatic.** If vps-secure is installed, SAASKIT injects its routes into the existing Caddy instance — no port conflict. If no proxy is found, a standalone Caddy is created. You don't need to configure anything.
+> **Reverse proxy detection is automatic.** If VPS-SECURE is installed, SAASKIT injects its routes into the existing Caddy instance — no port conflict. If no proxy is found, a standalone Caddy is created. You don't need to configure anything.
 
 > [!WARNING]
 > If a previous installation is detected (`.env` exists), the script stops and asks you to run `update` or `uninstall` first. **It will not silently overwrite an existing installation.**
@@ -152,7 +154,7 @@ sudo ./saaskit.sh keys    # displays all URLs and credentials
 ```
 
 > [!TIP]
-> Bookmark `https://n8n.<domain>`, `https://baserow.<domain>`, and `https://minio-console.<domain>` immediately after install. Your credentials are in `/etc/vps-secure/SAASKIT.conf`.
+> Bookmark `https://n8n.<domain>`, `https://baserow.<domain>`, and `https://minio-console.<domain>` immediately after install. Your credentials are in `/etc/VPS-SECURE/SAASKIT.conf`.
 
 ---
 
@@ -210,7 +212,7 @@ Add this block to your `claude_desktop_config.json`:
 }
 ```
 
-Your MCP token is in `/etc/vps-secure/SAASKIT.conf` → `MCP_TOKEN`.
+Your MCP token is in `/etc/VPS-SECURE/SAASKIT.conf` → `MCP_TOKEN`.
 
 Restart Claude Desktop. You'll see **n8n** appear in the MCP tools list (🔨 hammer icon).
 
@@ -430,7 +432,7 @@ The skill auto-triggers when Claude Code is working in this project and provides
 
 ## Built with
 
-- [vps-secure](https://github.com/rockballslab/vps-secure) — VPS hardening baseline (required)
+- [VPS-SECURE](https://github.com/rockballslab/VPS-SECURE) — VPS hardening baseline (required)
 - [n8n](https://n8n.io) — workflow automation platform
 - [n8n-mcp](https://github.com/czlonkowski/n8n-mcp) — MCP server for n8n by @czlonkowski
 - [Baserow](https://baserow.io) — open-source no-code database
