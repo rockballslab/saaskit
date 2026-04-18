@@ -126,6 +126,24 @@ detect_reverse_proxy() {
 }
 
 # ============================================================
+# Utilitaire : attendre qu'un container soit healthy
+# M4 FIX : déplacé au top-level (était redéfini à chaque appel cmd_update)
+# Usage : _wait_healthy <container_name> [timeout_secondes]
+# ============================================================
+_wait_healthy() {
+    local ctn="$1" timeout="${2:-60}" i=0
+    local has_health
+    has_health=$(docker inspect --format='{{if .State.Health}}yes{{end}}' "$ctn" 2>/dev/null || echo "")
+    [[ -z "$has_health" ]] && { sleep 3; return 0; }
+    while [[ $i -lt $timeout ]]; do
+        local s; s=$(docker inspect --format='{{.State.Health.Status}}' "$ctn" 2>/dev/null || echo "starting")
+        [[ "$s" == "healthy" ]] && return 0
+        sleep 1; i=$((i+1))
+    done
+    log_warn "$ctn pas encore healthy après ${timeout}s."
+}
+
+# ============================================================
 # Banner
 # ============================================================
 banner() {
@@ -836,8 +854,20 @@ _install_start_containers() {
     log_info "Démarrage de tous les services..."
     docker compose --env-file .env up -d
 
-    log_info "Attente démarrage applicatif (25s)..."
-    sleep 25
+    # M2 FIX : polling healthcheck au lieu de sleep fixe
+    # Attend que n8n, baserow et minio soient healthy (60s max)
+    log_info "Attente démarrage des services applicatifs (60s max)..."
+    for _i in {1..60}; do
+        local _n8n _brw _mio
+        _n8n=$(docker inspect --format='{{.State.Health.Status}}' saaskit-n8n     2>/dev/null || echo "starting")
+        _brw=$(docker inspect --format='{{.State.Health.Status}}' saaskit-baserow 2>/dev/null || echo "starting")
+        _mio=$(docker inspect --format='{{.State.Health.Status}}' saaskit-minio   2>/dev/null || echo "starting")
+        if [[ "$_n8n" == "healthy" && "$_brw" == "healthy" && "$_mio" == "healthy" ]]; then
+            log_success "Services applicatifs prêts (${_i}s)."; break
+        fi
+        sleep 1
+        [[ $_i -eq 60 ]] && log_warn "Timeout 60s — certains services tardent, on continue."
+    done
 
     local FAILED=false
     local SERVICES=(saaskit-postgres saaskit-dragonfly saaskit-redis saaskit-n8n saaskit-baserow saaskit-minio)
@@ -975,8 +1005,9 @@ HELPEREOF
     # ── Étape 9 : Vérification endpoints ─────────────────────
     etape "9" "$TOTAL_ETAPES" "Vérification des endpoints"
 
-    log_info "Test des URLs publiques (attente 15s)..."
-    sleep 15
+    # M2 FIX : attend le healthcheck n8n plutôt qu'un sleep fixe
+    log_info "Test des URLs publiques (attente healthcheck n8n, 30s max)..."
+    _wait_healthy "saaskit-n8n" 30
 
     for url in "https://${N8N_DOMAIN}/healthz" "https://${BASEROW_DOMAIN}/" "https://${MINIO_DOMAIN}/minio/health/live"; do
         local HTTP_CODE
@@ -1251,19 +1282,6 @@ cmd_update() {
     log_success "Images à jour."
 
     local UPDATED=0 SKIPPED=0
-
-    _wait_healthy() {
-        local ctn="$1" timeout="${2:-60}" i=0
-        local has_health
-        has_health=$(docker inspect --format='{{if .State.Health}}yes{{end}}' "$ctn" 2>/dev/null || echo "")
-        [[ -z "$has_health" ]] && { sleep 3; return 0; }
-        while [[ $i -lt $timeout ]]; do
-            local s; s=$(docker inspect --format='{{.State.Health.Status}}' "$ctn" 2>/dev/null || echo "starting")
-            [[ "$s" == "healthy" ]] && return 0
-            sleep 1; i=$((i+1))
-        done
-        log_warn "$ctn pas encore healthy après ${timeout}s."
-    }
 
     for svc in "${ALL_SERVICES[@]}"; do
         local ctn="saaskit-${svc}"
