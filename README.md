@@ -16,11 +16,12 @@ Built on top of [VPS-SECURE](https://github.com/rockballslab/VPS-SECURE) — fre
 
 👋 Hi, I'm **Fabrice** — a French entrepreneur and serial SaaS builder.
 
-Two years ago, I knew nothing about servers, APIs, or self-hosting. I was paying for a dozen SaaS tools, hitting limits every other week, and had zero control over my own data. Today I run a production stack that costs almost nothing, depends on no one, and I own every byte of it. It took me two years to get here. 
+Two years ago, I knew nothing about servers, APIs, or self-hosting. I was paying for a dozen SaaS tools, hitting limits every other week, and had zero control over my own data. Today I run a production stack that costs almost nothing, depends on no one, and I own every byte of it. It took me two years to get here.
+
+**With SAASKIT, it takes you 15 minutes.**
 
 > [!NOTE]
 > SAASKIT is the setup I wish I had when I started.
-> With SAASKIT, it takes you 15 minutes.
 
 
 Instead of spending days reading Docker tutorials, chasing config files, and guessing which security settings actually matter — you get a production-ready, fully wired stack in 15 minutes. The same stack I use on my own servers, every day, for all my projects.
