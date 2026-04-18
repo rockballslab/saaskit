@@ -14,7 +14,7 @@ Because the tools you already pay for every month have a free, production-grade,
 
 
 <p align="center">
-  <img src="./saaskit.png" alt="The essential Kit for Starters and Builders" width="100%">
+  <img src="./saaskit.png" alt="The essential Kit for Starters and Builders" width="80%">
 </p>
 
 
