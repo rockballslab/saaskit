@@ -28,7 +28,7 @@ Plus **100+ n8n workflow templates** and the **n8n-skills** Claude Code skillset
 ## Prerequisites
 
 - Ubuntu 24.04 LTS VPS
-- [vps-secure](https://github.com/rockballslab/vps-secure) installed (`install.sh` + `install-dashboard.sh`)
+- [vps-secure](https://github.com/rockballslab/vps-secure) installed (`install-secure.sh` + `install-dashboard.sh`)
 - DNS A records pointing to your VPS for all subdomains:
 
 ```
