@@ -5,7 +5,7 @@
 ---
 
 
-**SAASKIT is a One-script SaaS stack installer for self-hosted indie builders.**
+## SAASKIT is a One-script SaaS stack installer for self-hosted indie builders
 
 > n8n · Baserow · MinIO · PostgreSQL · Dragonfly · Claude Code · MCP
 
