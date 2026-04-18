@@ -64,6 +64,75 @@ The script asks a few questions (your domain, email, optional services). Everyth
 
 ---
 
+MCP — Let Claude control your stack
+MCP (Model Context Protocol) is an open standard by Anthropic that lets AI models connect to external tools and services — like a universal plug for AI.
+SAASKIT ships with n8n-MCP pre-configured: your n8n instance exposes an MCP server that Claude can use to read, create, and trigger workflows directly — no copy-pasting JSON, no manual API calls.
+
+    [!NOTE]
+    Think of MCP as giving Claude a keyboard and mouse on your n8n. You describe what you want in plain English. Claude builds and deploys it.
+
+What you can do with Claude + n8n via MCP
+
+    "Create a workflow that sends me a Telegram alert when a new row is added to Baserow"
+    "List all my active workflows and tell me which ones haven't run in 7 days"
+    "Build a lead capture workflow: webhook → Baserow → email notification"
+    "Trigger my backup workflow now"
+
+Claude writes, deploys, and can trigger your n8n workflows — from Claude Desktop, Claude.ai, or Claude Code CLI.
+Step 1 — Enable n8n API
+In your n8n instance: Settings → n8n API → Create an API key
+Then run on your VPS:
+
+sudo saaskit-mcp-apikey.sh <your-n8n-api-key>
+
+This wires the API key into the n8n-MCP container and restarts it automatically.
+Step 2 — Connect Claude Desktop
+Add this block to your claude_desktop_config.json:
+macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
+Windows: %APPDATA%\Claude\claude_desktop_config.json
+
+{
+  "mcpServers": {
+    "n8n": {
+      "command": "npx",
+      "args": ["n8n-mcp"],
+      "env": {
+        "MCP_MODE": "http",
+        "MCP_SERVER_URL": "https://mcpn8n.<yourdomain.com>",
+        "AUTH_TOKEN": "<your-mcp-token>",
+        "LOG_LEVEL": "error"
+      }
+    }
+  }
+}
+
+Your MCP token is in /etc/vps-secure/SAASKIT.conf → MCP_TOKEN.
+Restart Claude Desktop. You'll see n8n appear in the MCP tools list (hammer icon 🔨).
+Step 3 — Connect Claude Code CLI (on your VPS)
+Claude Code is installed by SAASKIT and pre-configured to talk to your stack. From your VPS:
+
+claude   # opens Claude Code CLI
+
+Claude Code auto-loads the skill at /opt/SAASKIT/templates/n8n-skills/SKILL.md, which gives it:
+
+    Your n8n, Baserow, and MinIO connection strings
+    PostgreSQL direct access patterns
+    n8n workflow best practices for your stack
+
+    [!TIP]
+    Claude Code + n8n-MCP on the same machine = your most powerful setup. You can ask Claude to write a workflow, deploy it via MCP, then verify it in the Baserow database — all in one conversation.
+
+Connecting other MCP clients
+n8n-MCP uses the standard HTTP+SSE transport. Any MCP-compatible client works:
+Client	Config needed
+Claude Desktop	See Step 2 above
+Claude Code CLI	Pre-configured at install
+Cursor	Same JSON config as Claude Desktop
+Windsurf	Same JSON config as Claude Desktop
+Custom agent	MCP_SERVER_URL + AUTH_TOKEN headers
+
+---
+
 ## Why n8n over Zapier or Make?
 
 > [!TIP]
