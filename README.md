@@ -68,6 +68,25 @@ Because the tools you already pay for every month have a free, production-grade,
 > [!IMPORTANT]
 > **At current cloud pricing, this stack replaces $80 to $300/month of SaaS costs.** Your VPS costs $5–20/month. The math is obvious.
 
+---
+
+## What you get
+
+| Service | What it does | Open-source alternative to |
+|---|---|---|
+| **[n8n](https://n8n.io)** | Visual workflow automation — APIs, webhooks, AI agents | Zapier, Make, n8n Cloud |
+| **[n8n-MCP](https://github.com/czlonkowski/n8n-mcp)** | MCP server — lets Claude control your n8n workflows | — |
+| **[Baserow](https://baserow.io)** | No-code database with a spreadsheet-like UI | Airtable, Monday |
+| **[MinIO](https://min.io)** | S3-compatible object storage — files, backups, assets | AWS S3, Cloudflare R2 |
+| **[PostgreSQL 16](https://postgresql.org)** | Production-grade relational database, shared by all services | AWS RDS, Supabase |
+| **[Dragonfly](https://dragonflydb.io)** | Redis-compatible cache, 25× faster than Redis — dedicated to n8n | Redis Cloud |
+| **[Redis 7](https://redis.io)** | Standard Redis cache — dedicated to Baserow | Redis Cloud |
+| **[Claude Code](https://claude.ai/code)** | AI coding CLI, pre-connected to your stack via MCP | GitHub Copilot, Cursor |
+
+**Bonus:** 100+ n8n workflow templates + the n8n-skills Claude Code skillset — cloned locally at install.
+
+---
+
 ### Why n8n over Zapier or Make?
 
 > [!TIP]
@@ -126,22 +145,6 @@ chmod +x saaskit.sh && sudo ./saaskit.sh install
 
 ---
 
-## What you get
-
-| Service | What it does | Open-source alternative to |
-|---|---|---|
-| **[n8n](https://n8n.io)** | Visual workflow automation — APIs, webhooks, AI agents | Zapier, Make, n8n Cloud |
-| **[n8n-MCP](https://github.com/czlonkowski/n8n-mcp)** | MCP server — lets Claude control your n8n workflows | — |
-| **[Baserow](https://baserow.io)** | No-code database with a spreadsheet-like UI | Airtable, Monday |
-| **[MinIO](https://min.io)** | S3-compatible object storage — files, backups, assets | AWS S3, Cloudflare R2 |
-| **[PostgreSQL 16](https://postgresql.org)** | Production-grade relational database, shared by all services | AWS RDS, Supabase |
-| **[Dragonfly](https://dragonflydb.io)** | Redis-compatible cache, 25× faster than Redis — dedicated to n8n | Redis Cloud |
-| **[Redis 7](https://redis.io)** | Standard Redis cache — dedicated to Baserow | Redis Cloud |
-| **[Claude Code](https://claude.ai/code)** | AI coding CLI, pre-connected to your stack via MCP | GitHub Copilot, Cursor |
-
-**Bonus:** 100+ n8n workflow templates + the n8n-skills Claude Code skillset — cloned locally at install.
-
----
 
 ## Prerequisites
 
