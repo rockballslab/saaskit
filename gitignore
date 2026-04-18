@@ -1,0 +1,35 @@
+# ============================================================
+# saas-kit — .gitignore
+# ============================================================
+
+# Secrets — JAMAIS committer
+.env
+*.env
+.env.*
+backup-external.conf
+
+# Générés par saaskit.sh — spécifiques à chaque install
+docker-compose.yml
+Caddyfile
+initdb/
+
+# Données et backups
+data/
+backups/
+
+# Templates clonés (trop lourds, récupérés à l'install)
+templates/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
