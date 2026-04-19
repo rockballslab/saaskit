@@ -7,7 +7,7 @@
 
 ## SAASKIT is a One-script SaaS stack installer for self-hosted indie builders
 
-> n8n · Baserow · MinIO · PostgreSQL · Dragonfly · Claude Code · MCP
+> n8n · Baserow · MinIO · PostgreSQL · Dragonfly · Logto · Listmonk · Claude Code · MCP
 
 
 > [!NOTE]
@@ -64,9 +64,11 @@ Because the tools you already pay for every month have a free, production-grade,
 | **AWS RDS** PostgreSQL (db.t3.micro: ~$15/mo) | **PostgreSQL 16** — shared between all services | ~$15/mo |
 | **Zapier** Pro ($49/mo) | Replaced by n8n self-hosted | ~$49/mo |
 | **Make** Core ($9/mo) | Replaced by n8n self-hosted | ~$9/mo |
+| **Auth0** ($23/mo, 1k MAU) | **Logto** self-hosted — unlimited users, OIDC/OAuth2 | ~$23–200/mo |
+| **Mailchimp** / **Brevo** paid | **Listmonk** self-hosted — unlimited subscribers, unlimited emails | ~$20–100/mo |
 
 > [!IMPORTANT]
-> **At current cloud pricing, this stack replaces $80 to $300/month of SaaS costs.** Your VPS costs $5–20/month. The math is obvious.
+> **At current cloud pricing, this stack replaces $100 to $500/month of SaaS costs.** Your VPS costs $5–20/month. The math is obvious.
 
 ---
 
@@ -81,7 +83,11 @@ Because the tools you already pay for every month have a free, production-grade,
 | **[PostgreSQL 16](https://postgresql.org)** | Production-grade relational database, shared by all services | AWS RDS, Supabase |
 | **[Dragonfly](https://dragonflydb.io)** | Redis-compatible cache, 25× faster than Redis — dedicated to n8n | Redis Cloud |
 | **[Redis 7](https://redis.io)** | Standard Redis cache — dedicated to Baserow | Redis Cloud |
+| **[Logto](https://logto.io)** | OIDC/OAuth2 auth — user management, social login, MFA for your SaaS | Auth0, Firebase Auth |
+| **[Listmonk](https://listmonk.app)** | Self-hosted email campaigns & transactional mail | Mailchimp, Brevo |
 | **[Claude Code](https://claude.ai/code)** | AI coding CLI, pre-connected to your stack via MCP | GitHub Copilot, Cursor |
+
+**Optional:** [Pocket TTS](https://github.com/kyutai-labs/pocket-tts) — local CPU voice synthesis (100M params, no GPU needed). Install during setup when prompted.
 
 **Bonus:** 100+ n8n workflow templates + the n8n-skills Claude Code skillset — cloned locally at install.
 
@@ -123,6 +129,21 @@ MinIO on your VPS: unlimited storage (bound by your disk), bandwidth included in
 > [!NOTE]
 > Your existing AWS S3 code works with MinIO without modification. Change the endpoint URL and credentials in your `.env`. That's it.
 
+### Why Logto over Auth0?
+
+Auth0 free tier caps at 7,500 MAU. After that, $23/month minimum — and it scales fast with users. Firebase Auth locks you into Google's ecosystem. Cognito charges per MAU.
+
+Logto self-hosted: unlimited users, unlimited apps, full OIDC/OAuth2 compliance, social login (Google, GitHub, etc.), MFA, and a clean admin UI — all on your VPS.
+
+> [!NOTE]
+> Logto is pre-wired to the shared PostgreSQL instance. Zero extra database to manage.
+
+### Why Listmonk over Mailchimp?
+
+Mailchimp free tier caps at 500 contacts and 1,000 sends/month. Paid plans start at $20/month and scale by contact count — a 10k-subscriber list costs $100+/month.
+
+Listmonk self-hosted: unlimited subscribers, unlimited campaigns, transactional emails, double opt-in, bounce handling — all for the cost of your VPS and your SMTP provider.
+
 ---
 
 
@@ -162,6 +183,8 @@ chmod +x saaskit.sh && sudo ./saaskit.sh install
 
 > [!NOTE]
 > Tested on Hostinger KVM2 (16GB RAM, 8 vCPU, 200GB NVMe). Total install time: ~8 minutes.
+>
+> If you install Pocket TTS (optional), add ~1 GB RAM and ~500 MB disk for the model. First boot downloads the model from HuggingFace (~400 MB).
 
 ### DNS records (required before install)
 
@@ -173,7 +196,9 @@ mcpn8n.<yourdomain.com>         → YOUR_VPS_IP
 baserow.<yourdomain.com>        → YOUR_VPS_IP
 minio.<yourdomain.com>          → YOUR_VPS_IP
 minio-console.<yourdomain.com>  → YOUR_VPS_IP
-listmonk.<yourdomain.com>       → YOUR_VPS_IP   # only if installing Listmonk
+listmonk.<yourdomain.com>       → YOUR_VPS_IP
+auth.<yourdomain.com>           → YOUR_VPS_IP
+tts.<yourdomain.com>            → YOUR_VPS_IP   # only if installing Pocket TTS
 ```
 
 > [!TIP]
@@ -186,20 +211,20 @@ listmonk.<yourdomain.com>       → YOUR_VPS_IP   # only if installing Listmonk
 The script is **fully interactive** and guides you at every step:
 
 ```
-  Domain root (ex: mydomain.com) :
-  Admin email                    :
-  Install Listmonk? (yes/no)     :
+  Domain root (ex: mydomain.com)                          :
+  Admin email                                             :
+  Install Pocket TTS (local voice synthesis, optional)?   :
 ```
 
-Everything else is generated automatically — database passwords, encryption keys, MCP authentication token. All credentials are saved to `/etc/VPS-SECURE/SAASKIT.conf` (readable only by root).
+Listmonk and Logto are installed automatically — no prompt needed. Everything else is generated automatically — database passwords, encryption keys, MCP authentication token. All credentials are saved to `/etc/vps-secure/saas-kit.conf` (readable only by root).
 
 ### What the script does — step by step
 
 ```
 [1/9] Prerequisites    — detects Docker, reverse proxy mode (inject or standalone)
-[2/9] Configuration    — prompts for domain + email, generates all secrets
+[2/9] Configuration    — prompts for domain + email + Pocket TTS, generates all secrets
 [3/9] DNS check        — verifies all subdomains resolve to this VPS
-[4/9] Environment      — creates /opt/SAASKIT/, .env (chmod 600), init SQL
+[4/9] Environment      — creates /opt/saas-kit/, .env (chmod 600), init SQL (4 databases)
 [5/9] docker-compose   — generates compose file with pinned image versions
 [6/9] Reverse proxy    — injects Caddy blocks (or creates standalone Caddyfile)
 [7/9] Containers       — pulls images, starts services in dependency order
@@ -221,14 +246,28 @@ Everything else is generated automatically — database passwords, encryption ke
 
 Baserow does not auto-create accounts on first run. Open `https://baserow.<domain>` and register with your admin email.
 
-### Step 2 — Verify all services
+### Step 2 — Create your Logto admin account
+
+Logto does not auto-create accounts on first run. Access the admin console locally on your VPS:
+
+```bash
+ssh -L 3002:127.0.0.1:3002 vpsadmin@<your-vps-ip> -p 2222
+```
+
+Then open `http://localhost:3002` in your browser and create your admin account. The Logto OIDC endpoint is publicly accessible at `https://auth.<domain>`.
+
+### Step 3 — Configure Listmonk
+
+Open `https://listmonk.<domain>/install` and complete the initial setup (admin account + SMTP configuration).
+
+### Step 4 — Verify all services
 
 ```bash
 sudo ./saaskit.sh keys    # displays all URLs and credentials
 ```
 
 > [!TIP]
-> Bookmark `https://n8n.<domain>`, `https://baserow.<domain>`, and `https://minio-console.<domain>` immediately after install. Your credentials are in `/etc/VPS-SECURE/SAASKIT.conf`.
+> Bookmark `https://n8n.<domain>`, `https://baserow.<domain>`, `https://auth.<domain>`, and `https://minio-console.<domain>` immediately after install. Your credentials are in `/etc/vps-secure/saas-kit.conf`.
 
 ---
 
@@ -286,7 +325,7 @@ Add this block to your `claude_desktop_config.json`:
 }
 ```
 
-Your MCP token is in `/etc/VPS-SECURE/SAASKIT.conf` → `MCP_TOKEN`.
+Your MCP token is in `/etc/vps-secure/saas-kit.conf` → `MCP_TOKEN`.
 
 Restart Claude Desktop. You'll see **n8n** appear in the MCP tools list (🔨 hammer icon).
 
@@ -298,7 +337,7 @@ Claude Code is installed by SAASKIT and pre-configured to talk to your stack. Fr
 claude   # opens Claude Code CLI
 ```
 
-Claude Code auto-loads the skill at `/opt/SAASKIT/templates/n8n-skills/SKILL.md`, which gives it your connection strings, PostgreSQL access patterns, and n8n best practices.
+Claude Code auto-loads the skill at `/opt/saas-kit/templates/n8n-skills/SKILL.md`, which gives it your connection strings, PostgreSQL access patterns, and n8n best practices.
 
 > [!TIP]
 > Claude Code + n8n-MCP on the same machine = your most powerful setup. Ask Claude to write a workflow, deploy it via MCP, then verify the result in Baserow — all in one conversation.
@@ -326,22 +365,22 @@ n8n-MCP uses the standard HTTP+SSE transport. Any MCP-compatible client works:
                    [Caddy / TLS]
               (vps-monitor-caddy or saaskit-caddy)
                           │
-         ┌────────────────┼────────────────┐
-         │                │                │
-  127.0.0.1:5678   127.0.0.1:5680   127.0.0.1:9000/9001
-         │                │                │
-    saaskit-n8n    saaskit-baserow    saaskit-minio
+         ┌────────────────┼──────────────────────┐
+         │                │          │            │
+  127.0.0.1:5678   127.0.0.1:5680  :5682        :3001
+         │                │          │            │
+    saaskit-n8n    saaskit-baserow  listmonk    logto
          │
-  127.0.0.1:5679
-         │
-   saaskit-n8n-mcp
+  127.0.0.1:5679   127.0.0.1:9000/9001
+         │                │
+   saaskit-n8n-mcp   saaskit-minio
          │
          └──────────── saaskit-net (Docker bridge) ──────────────┐
                          │              │             │           │
-                  saaskit-postgres  dragonfly      redis    (listmonk)
+                  saaskit-postgres  dragonfly      redis    (saaskit-tts)
 ```
 
-All SAASKIT containers communicate on `saaskit-net`. Only n8n, Baserow, MinIO, and n8n-MCP are reachable from outside — only on `127.0.0.1`, proxied through Caddy with automatic HTTPS.
+All SAASKIT containers communicate on `saaskit-net`. All public services are bound to `127.0.0.1` and proxied through Caddy with automatic HTTPS. The Logto admin console (port 3002) is local-only — never exposed publicly.
 
 ---
 
@@ -363,11 +402,13 @@ sudo ./saaskit.sh uninstall           # clean uninstall (asks confirmation)
 ### Docker commands
 
 ```bash
-cd /opt/SAASKIT
+cd /opt/saas-kit
 
 docker compose ps                                                # container status
 docker compose logs -f n8n                                       # live logs for n8n
 docker compose logs -f baserow                                   # live logs for Baserow
+docker compose logs -f logto                                     # live logs for Logto
+docker compose logs -f listmonk                                  # live logs for Listmonk
 docker compose restart n8n                                       # restart a service
 docker compose down && docker compose --env-file .env up -d     # full restart
 ```
@@ -378,14 +419,14 @@ docker compose down && docker compose --env-file .env up -d     # full restart
 
 `saaskit.sh backup` does two things:
 
-1. **PostgreSQL dump** — all databases (`n8n_db`, `baserow_db`, + `listmonk_db` if installed), compressed with gzip
+1. **PostgreSQL dump** — all databases (`n8n_db`, `baserow_db`, `listmonk_db`, `logto_db`), compressed with gzip
 2. **Volume backup** — n8n workflows + credentials, MinIO data
 
-Backups are stored in `/opt/SAASKIT/backups/` and automatically uploaded to your MinIO internal bucket.
+Backups are stored in `/opt/saas-kit/backups/` and automatically uploaded to your MinIO internal bucket.
 
 ### External backup (optional but recommended)
 
-For off-VPS backup (Backblaze B2, Hetzner S3, etc.), create `/opt/SAASKIT/backup-external.conf`:
+For off-VPS backup (Backblaze B2, Hetzner S3, etc.), create `/opt/saas-kit/backup-external.conf`:
 
 ```bash
 BACKUP_EXTERNAL_ENDPOINT="https://s3.us-west-004.backblazeb2.com"
@@ -395,7 +436,7 @@ BACKUP_EXTERNAL_BUCKET="my-saaskit-backups"
 ```
 
 > [!IMPORTANT]
-> Backups older than 7 days are automatically deleted from `/opt/SAASKIT/backups/`. Configure an external destination if you need longer retention.
+> Backups older than 7 days are automatically deleted from `/opt/saas-kit/backups/`. Configure an external destination if you need longer retention.
 
 ---
 
@@ -404,8 +445,8 @@ BACKUP_EXTERNAL_BUCKET="my-saaskit-backups"
 After install, two template collections are available locally:
 
 ```
-/opt/SAASKIT/templates/awesome-n8n-templates/   # 100+ ready-to-import workflows
-/opt/SAASKIT/templates/n8n-skills/              # Claude Code skillset for n8n
+/opt/saas-kit/templates/awesome-n8n-templates/   # 100+ ready-to-import workflows
+/opt/saas-kit/templates/n8n-skills/              # Claude Code skillset for n8n
 ```
 
 **Import a workflow:** n8n UI → New workflow → ⋮ menu → Import from file → pick any `.json`.
@@ -413,7 +454,7 @@ After install, two template collections are available locally:
 **Use n8n-skills with Claude Code:**
 
 ```bash
-cat /opt/SAASKIT/templates/n8n-skills/SKILL.md
+cat /opt/saas-kit/templates/n8n-skills/SKILL.md
 ```
 
 ---
@@ -440,13 +481,16 @@ The skill auto-triggers when Claude Code is working in this project and provides
 | Baserow | 127.0.0.1 | 5680 | Proxied by Caddy |
 | MinIO API | 127.0.0.1 | 9000 | S3-compatible endpoint |
 | MinIO Console | 127.0.0.1 | 9001 | Admin UI |
-| Listmonk | 127.0.0.1 | 5682 | Optional, if installed |
+| Listmonk | 127.0.0.1 | 5682 | Proxied by Caddy |
+| Logto (OIDC) | 127.0.0.1 | 3001 | Proxied by Caddy |
+| Logto (admin) | 127.0.0.1 | 3002 | Local only — access via SSH tunnel |
+| Pocket TTS | 127.0.0.1 | 5683 | Optional — proxied by Caddy if installed |
 | PostgreSQL | internal only | 5432 | Not exposed externally |
-| Dragonfly | internal only | 6379 | n8n cache — not exposed (separate container) |
-| Redis | internal only | 6379 | Baserow cache — not exposed (separate container) |
+| Dragonfly | internal only | 6379 | n8n cache — not exposed |
+| Redis | internal only | 6379 | Baserow cache — not exposed |
 
 > [!WARNING]
-> No service is bound to `0.0.0.0`. Everything is either internal (`saaskit-net`) or bound to `127.0.0.1` and proxied through Caddy with TLS. **Never manually expose PostgreSQL, Dragonfly, or Redis on a public port.**
+> No service is bound to `0.0.0.0`. Everything is either internal (`saaskit-net`) or bound to `127.0.0.1` and proxied through Caddy with TLS. **Never manually expose PostgreSQL, Dragonfly, Redis, or the Logto admin port on a public port.**
 
 ---
 
@@ -460,6 +504,9 @@ The skill auto-triggers when Claude Code is working in this project and provides
 - [MinIO](https://min.io) — S3-compatible object storage
 - [PostgreSQL](https://postgresql.org) — relational database
 - [DragonflyDB](https://dragonflydb.io) — Redis-compatible in-memory store
+- [Logto](https://logto.io) — open-source OIDC/OAuth2 auth & identity
+- [Listmonk](https://listmonk.app) — self-hosted email & newsletter platform
+- [Kyutai Pocket TTS](https://github.com/kyutai-labs/pocket-tts) — lightweight CPU voice synthesis (optional)
 - [Caddy](https://caddyserver.com) — automatic HTTPS reverse proxy
 - [awesome-n8n-templates](https://github.com/enescingoz/awesome-n8n-templates) — community workflow templates
 - [n8n-skills](https://github.com/czlonkowski/n8n-skills) — Claude Code skillset for n8n
