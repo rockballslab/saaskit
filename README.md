@@ -7,7 +7,7 @@
 
 ## SAASKIT is a One-script SaaS stack installer for self-hosted indie builders
 
-> n8n · Baserow · MinIO · PostgreSQL · Dragonfly · Logto · Listmonk · Claude Code · MCP
+> n8n · Baserow · MinIO · PostgreSQL · Dragonfly · Logto · Listmonk · Uptime Kuma · Claude Code · MCP
 
 
 > [!NOTE]
@@ -66,9 +66,10 @@ Because the tools you already pay for every month have a free, production-grade,
 | **Make** Core ($9/mo) | Replaced by n8n self-hosted | ~$9/mo |
 | **Auth0** ($23/mo, 1k MAU) | **Logto** self-hosted — unlimited users, OIDC/OAuth2 | ~$23–200/mo |
 | **Mailchimp** / **Brevo** paid | **Listmonk** self-hosted — unlimited subscribers, unlimited emails | ~$20–100/mo |
+| **Pingdom** / **UptimeRobot** paid | **Uptime Kuma** self-hosted — unlimited monitors + public status page | ~$10–50/mo |
 
 > [!IMPORTANT]
-> **At current cloud pricing, this stack replaces $100 to $500/month of SaaS costs.** Your VPS costs $5–20/month. The math is obvious.
+> **At current cloud pricing, this stack replaces $100 to $550/month of SaaS costs.** Your VPS costs $5–20/month. The math is obvious.
 
 ---
 
@@ -85,6 +86,7 @@ Because the tools you already pay for every month have a free, production-grade,
 | **[Redis 7](https://redis.io)** | Standard Redis cache — dedicated to Baserow | Redis Cloud |
 | **[Logto](https://logto.io)** | OIDC/OAuth2 auth — user management, social login, MFA for your SaaS | Auth0, Firebase Auth |
 | **[Listmonk](https://listmonk.app)** | Self-hosted email campaigns & transactional mail | Mailchimp, Brevo |
+| **[Uptime Kuma](https://uptime.kuma.pet)** | Uptime monitoring + public status page — know before your users do | Pingdom, UptimeRobot |
 | **[Claude Code](https://claude.ai/code)** | AI coding CLI, pre-connected to your stack via MCP | GitHub Copilot, Cursor |
 
 **Optional:** [Pocket TTS](https://github.com/kyutai-labs/pocket-tts) — local CPU voice synthesis (100M params, no GPU needed). Install during setup when prompted.
@@ -144,6 +146,12 @@ Mailchimp free tier caps at 500 contacts and 1,000 sends/month. Paid plans start
 
 Listmonk self-hosted: unlimited subscribers, unlimited campaigns, transactional emails, double opt-in, bounce handling — all for the cost of your VPS and your SMTP provider.
 
+### Why Uptime Kuma over Pingdom?
+
+Pingdom starts at $10/month for 10 monitors. UptimeRobot free tier limits check intervals to 5 minutes and caps monitors. Statuspage.io for a public status page is another $29/month.
+
+Uptime Kuma self-hosted: unlimited monitors, 60-second check intervals, Telegram/email/webhook alerts, and a public status page at `https://status.yourdomain.com` — all included, zero extra cost.
+
 ---
 
 
@@ -198,6 +206,7 @@ minio.<yourdomain.com>          → YOUR_VPS_IP
 minio-console.<yourdomain.com>  → YOUR_VPS_IP
 listmonk.<yourdomain.com>       → YOUR_VPS_IP
 auth.<yourdomain.com>           → YOUR_VPS_IP
+status.<yourdomain.com>         → YOUR_VPS_IP
 tts.<yourdomain.com>            → YOUR_VPS_IP   # only if installing Pocket TTS
 ```
 
@@ -216,7 +225,7 @@ The script is **fully interactive** and guides you at every step:
   Install Pocket TTS (local voice synthesis, optional)?   :
 ```
 
-Listmonk and Logto are installed automatically — no prompt needed. Everything else is generated automatically — database passwords, encryption keys, MCP authentication token. All credentials are saved to `/etc/vps-secure/saas-kit.conf` (readable only by root).
+Listmonk, Logto and Uptime Kuma are installed automatically — no prompt needed. Everything else is generated automatically — database passwords, encryption keys, MCP authentication token. All credentials are saved to `/etc/vps-secure/saas-kit.conf` (readable only by root).
 
 ### What the script does — step by step
 
@@ -260,14 +269,18 @@ Then open `http://localhost:3002` in your browser and create your admin account.
 
 Open `https://listmonk.<domain>/install` and complete the initial setup (admin account + SMTP configuration).
 
-### Step 4 — Verify all services
+### Step 4 — Set up Uptime Kuma
+
+Open `https://status.<domain>` and create your admin account. Then add monitors for each service — n8n, Baserow, Logto, MinIO. Your users can check `https://status.<domain>` at any time to see the real-time status of your SaaS.
+
+### Step 5 — Verify all services
 
 ```bash
 sudo ./saaskit.sh keys    # displays all URLs and credentials
 ```
 
 > [!TIP]
-> Bookmark `https://n8n.<domain>`, `https://baserow.<domain>`, `https://auth.<domain>`, and `https://minio-console.<domain>` immediately after install. Your credentials are in `/etc/vps-secure/saas-kit.conf`.
+> Bookmark `https://n8n.<domain>`, `https://baserow.<domain>`, `https://auth.<domain>`, `https://status.<domain>`, and `https://minio-console.<domain>` immediately after install. Your credentials are in `/etc/vps-secure/saas-kit.conf`.
 
 ---
 
@@ -365,11 +378,11 @@ n8n-MCP uses the standard HTTP+SSE transport. Any MCP-compatible client works:
                    [Caddy / TLS]
               (vps-monitor-caddy or saaskit-caddy)
                           │
-         ┌────────────────┼──────────────────────┐
-         │                │          │            │
-  127.0.0.1:5678   127.0.0.1:5680  :5682        :3001
-         │                │          │            │
-    saaskit-n8n    saaskit-baserow  listmonk    logto
+         ┌────────────────┼──────────────────────────┐
+         │                │          │       │        │
+  127.0.0.1:5678   127.0.0.1:5680  :5682   :3001    :5684
+         │                │          │       │        │
+    saaskit-n8n    saaskit-baserow  listmonk logto  uptime-kuma
          │
   127.0.0.1:5679   127.0.0.1:9000/9001
          │                │
@@ -409,6 +422,7 @@ docker compose logs -f n8n                                       # live logs for
 docker compose logs -f baserow                                   # live logs for Baserow
 docker compose logs -f logto                                     # live logs for Logto
 docker compose logs -f listmonk                                  # live logs for Listmonk
+docker compose logs -f uptime-kuma                               # live logs for Uptime Kuma
 docker compose restart n8n                                       # restart a service
 docker compose down && docker compose --env-file .env up -d     # full restart
 ```
@@ -420,7 +434,7 @@ docker compose down && docker compose --env-file .env up -d     # full restart
 `saaskit.sh backup` does two things:
 
 1. **PostgreSQL dump** — all databases (`n8n_db`, `baserow_db`, `listmonk_db`, `logto_db`), compressed with gzip
-2. **Volume backup** — n8n workflows + credentials, MinIO data
+2. **Volume backup** — n8n workflows + credentials, MinIO data, Uptime Kuma monitors + history
 
 Backups are stored in `/opt/saas-kit/backups/` and automatically uploaded to your MinIO internal bucket.
 
@@ -484,6 +498,7 @@ The skill auto-triggers when Claude Code is working in this project and provides
 | Listmonk | 127.0.0.1 | 5682 | Proxied by Caddy |
 | Logto (OIDC) | 127.0.0.1 | 3001 | Proxied by Caddy |
 | Logto (admin) | 127.0.0.1 | 3002 | Local only — access via SSH tunnel |
+| Uptime Kuma | 127.0.0.1 | 5684 | Proxied by Caddy — status page public |
 | Pocket TTS | 127.0.0.1 | 5683 | Optional — proxied by Caddy if installed |
 | PostgreSQL | internal only | 5432 | Not exposed externally |
 | Dragonfly | internal only | 6379 | n8n cache — not exposed |
@@ -506,6 +521,7 @@ The skill auto-triggers when Claude Code is working in this project and provides
 - [DragonflyDB](https://dragonflydb.io) — Redis-compatible in-memory store
 - [Logto](https://logto.io) — open-source OIDC/OAuth2 auth & identity
 - [Listmonk](https://listmonk.app) — self-hosted email & newsletter platform
+- [Uptime Kuma](https://uptime.kuma.pet) — self-hosted uptime monitoring & status pages
 - [Kyutai Pocket TTS](https://github.com/kyutai-labs/pocket-tts) — lightweight CPU voice synthesis (optional)
 - [Caddy](https://caddyserver.com) — automatic HTTPS reverse proxy
 - [awesome-n8n-templates](https://github.com/enescingoz/awesome-n8n-templates) — community workflow templates
