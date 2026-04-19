@@ -487,7 +487,6 @@ The skill auto-triggers when Claude Code is working in this project and provides
 | Baserow | 127.0.0.1 | 5680 | Proxied by Caddy |
 | MinIO API | 127.0.0.1 | 9000 | S3-compatible endpoint |
 | MinIO Console | 127.0.0.1 | 9001 | Admin UI |
-| Listmonk | 127.0.0.1 | 5682 | Proxied by Caddy |
 | Logto (OIDC) | 127.0.0.1 | 3001 | Proxied by Caddy |
 | Logto (admin) | 127.0.0.1 | 3002 | Local only — access via SSH tunnel |
 | Uptime Kuma | 127.0.0.1 | 5684 | Proxied by Caddy — status page public |
@@ -512,7 +511,6 @@ The skill auto-triggers when Claude Code is working in this project and provides
 - [PostgreSQL](https://postgresql.org) — relational database
 - [DragonflyDB](https://dragonflydb.io) — Redis-compatible in-memory store
 - [Logto](https://logto.io) — open-source OIDC/OAuth2 auth & identity
-- [Listmonk](https://listmonk.app) — self-hosted email & newsletter platform
 - [Uptime Kuma](https://uptime.kuma.pet) — self-hosted uptime monitoring & status pages
 - [Kyutai Pocket TTS](https://github.com/kyutai-labs/pocket-tts) — lightweight CPU voice synthesis (optional)
 - [Caddy](https://caddyserver.com) — automatic HTTPS reverse proxy
