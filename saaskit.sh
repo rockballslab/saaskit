@@ -70,6 +70,9 @@ PORT_BASEROW=5680
 PORT_MINIO_API=9000
 PORT_MINIO_CONSOLE=9001
 PORT_LISTMONK=5682
+PORT_LOGTO=3001
+PORT_LOGTO_ADMIN=3002
+PORT_TTS=5683
 
 # ============================================================
 # Vérification root
@@ -207,8 +210,15 @@ _install_gather_config() {
     [[ ! "$ADMIN_EMAIL" =~ ^[^@]+@[^@]+\.[^@]+$ ]] && { log_error "Email invalide."; exit 1; }
 
     echo ""
-    read -rp "  Installer Listmonk (email transactionnel) ? (oui/non) : " INSTALL_LISTMONK
-    INSTALL_LISTMONK="${INSTALL_LISTMONK:-non}"
+    read -rp "  Installer Pocket TTS (synthèse vocale locale, optionnel) ? (oui/non) : " INSTALL_TTS
+    INSTALL_TTS="${INSTALL_TTS:-non}"
+
+    if [[ "$INSTALL_TTS" == "oui" ]]; then
+        read -rp "  HuggingFace token (requis pour Pocket TTS, voir hf.co/settings/tokens) : " HF_TOKEN
+        [[ -z "$HF_TOKEN" ]] && { log_error "HF_TOKEN obligatoire pour Pocket TTS."; exit 1; }
+    else
+        HF_TOKEN=""
+    fi
 
     log_info "Génération des secrets..."
     # E2 FIX : base64 48 → ~36 alphanum après tr-dc → head -c 20 toujours satisfait
@@ -226,13 +236,20 @@ _install_gather_config() {
     MINIO_DOMAIN="minio.${ROOT_DOMAIN}"
     MINIO_CONSOLE_DOMAIN="minio-console.${ROOT_DOMAIN}"
     LISTMONK_DOMAIN="listmonk.${ROOT_DOMAIN}"
+    LOGTO_DOMAIN="auth.${ROOT_DOMAIN}"
+    LOGTO_ADMIN_DOMAIN="auth-admin.${ROOT_DOMAIN}"
+    TTS_DOMAIN="tts.${ROOT_DOMAIN}"
 
     echo ""
-    log_info "Sous-domaines configurés :"
-    for d in "$N8N_DOMAIN" "$MCP_DOMAIN" "$BASEROW_DOMAIN" "$MINIO_DOMAIN" "$MINIO_CONSOLE_DOMAIN"; do
+    log_info "Sous-domaines qui seront configurés :"
+    for d in "$N8N_DOMAIN" "$MCP_DOMAIN" "$BASEROW_DOMAIN" "$MINIO_DOMAIN" \
+              "$MINIO_CONSOLE_DOMAIN" "$LISTMONK_DOMAIN" "$LOGTO_DOMAIN"; do
         echo -e "  ${BLANC}$d${RESET}"
     done
-    [[ "$INSTALL_LISTMONK" == "oui" ]] && echo -e "  ${BLANC}$LISTMONK_DOMAIN${RESET}"
+    [[ "$INSTALL_TTS" == "oui" ]] && echo -e "  ${BLANC}$TTS_DOMAIN${RESET}"
+    echo ""
+    log_warn "Listmonk (email) et Logto (auth OIDC) sont installés automatiquement."
+    log_warn "Pocket TTS : $([ "$INSTALL_TTS" == "oui" ] && echo "OUI" || echo "non")"
     log_success "Secrets générés."
 
     # ── Étape 2 : DNS ────────────────────────────────────────
@@ -247,8 +264,9 @@ _install_check_dns() {
     [[ -z "$VPS_IP" ]] && VPS_IP="<IP inconnue>"
     log_info "IP VPS détectée : $VPS_IP"
 
-    local DOMAINS_TO_CHECK=("$N8N_DOMAIN" "$MCP_DOMAIN" "$BASEROW_DOMAIN" "$MINIO_DOMAIN" "$MINIO_CONSOLE_DOMAIN")
-    [[ "$INSTALL_LISTMONK" == "oui" ]] && DOMAINS_TO_CHECK+=("$LISTMONK_DOMAIN")
+    local DOMAINS_TO_CHECK=("$N8N_DOMAIN" "$MCP_DOMAIN" "$BASEROW_DOMAIN" "$MINIO_DOMAIN" \
+                             "$MINIO_CONSOLE_DOMAIN" "$LISTMONK_DOMAIN" "$LOGTO_DOMAIN")
+    [[ "$INSTALL_TTS" == "oui" ]] && DOMAINS_TO_CHECK+=("$TTS_DOMAIN")
 
     local DNS_OK=true
     for domain in "${DOMAINS_TO_CHECK[@]}"; do
@@ -279,7 +297,8 @@ _install_create_env() {
     mkdir -p "$KIT_DIR"
     mkdir -p "$DATA_DIR/postgres" "$DATA_DIR/dragonfly" "$DATA_DIR/redis" \
              "$DATA_DIR/n8n" "$DATA_DIR/baserow" "$DATA_DIR/minio" \
-             "$DATA_DIR/listmonk" "$KIT_DIR/templates" "$KIT_DIR/initdb"
+             "$DATA_DIR/listmonk" "$DATA_DIR/logto" "$DATA_DIR/tts" \
+             "$KIT_DIR/templates" "$KIT_DIR/initdb"
 
     if [[ -d "$DATA_DIR/postgres/global" ]]; then
         log_warn "Données PostgreSQL existantes — le script SQL init NE sera PAS réexécuté."
@@ -308,6 +327,8 @@ BASEROW_DOMAIN=${BASEROW_DOMAIN}
 MINIO_DOMAIN=${MINIO_DOMAIN}
 MINIO_CONSOLE_DOMAIN=${MINIO_CONSOLE_DOMAIN}
 LISTMONK_DOMAIN=${LISTMONK_DOMAIN}
+LOGTO_DOMAIN=${LOGTO_DOMAIN}
+LOGTO_ADMIN_DOMAIN=${LOGTO_ADMIN_DOMAIN}
 ADMIN_EMAIL=${ADMIN_EMAIL}
 POSTGRES_USER=saaskit
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -320,8 +341,14 @@ BASEROW_PASSWORD=${BASEROW_PASSWORD}
 BASEROW_SECRET_KEY=${BASEROW_SECRET_KEY}
 MINIO_ROOT_USER=admin
 MINIO_ROOT_PASSWORD=${MINIO_PASSWORD}
-INSTALL_LISTMONK=${INSTALL_LISTMONK}
+INSTALL_LISTMONK=oui
 PORT_LISTMONK=${PORT_LISTMONK}
+PORT_LOGTO=${PORT_LOGTO}
+PORT_LOGTO_ADMIN=${PORT_LOGTO_ADMIN}
+INSTALL_TTS=${INSTALL_TTS}
+HF_TOKEN=${HF_TOKEN}
+TTS_DOMAIN=${TTS_DOMAIN}
+PORT_TTS=${PORT_TTS}
 KIT_DIR=${KIT_DIR}
 DATA_DIR=${DATA_DIR}
 ENV
@@ -329,18 +356,12 @@ ENV
     chmod 600 "$KIT_DIR/.env"
     log_success ".env généré : $KIT_DIR/.env"
 
-    if [[ "$INSTALL_LISTMONK" == "oui" ]]; then
-        cat > "$KIT_DIR/initdb/01-create-databases.sql" << 'SQL'
-CREATE DATABASE n8n_db; GRANT ALL PRIVILEGES ON DATABASE n8n_db TO saaskit;
-CREATE DATABASE baserow_db; GRANT ALL PRIVILEGES ON DATABASE baserow_db TO saaskit;
-CREATE DATABASE listmonk_db; GRANT ALL PRIVILEGES ON DATABASE listmonk_db TO saaskit;
+    cat > "$KIT_DIR/initdb/01-create-databases.sql" << 'SQL'
+CREATE DATABASE n8n_db;       GRANT ALL PRIVILEGES ON DATABASE n8n_db       TO saaskit;
+CREATE DATABASE baserow_db;   GRANT ALL PRIVILEGES ON DATABASE baserow_db   TO saaskit;
+CREATE DATABASE listmonk_db;  GRANT ALL PRIVILEGES ON DATABASE listmonk_db  TO saaskit;
+CREATE DATABASE logto_db;     GRANT ALL PRIVILEGES ON DATABASE logto_db     TO saaskit;
 SQL
-    else
-        cat > "$KIT_DIR/initdb/01-create-databases.sql" << 'SQL'
-CREATE DATABASE n8n_db; GRANT ALL PRIVILEGES ON DATABASE n8n_db TO saaskit;
-CREATE DATABASE baserow_db; GRANT ALL PRIVILEGES ON DATABASE baserow_db TO saaskit;
-SQL
-    fi
     log_success "Script SQL init généré."
 
     # ── Étape 4 : docker-compose.yml ─────────────────────────
@@ -349,9 +370,8 @@ SQL
 _install_generate_compose() {
     etape "4" "$TOTAL_ETAPES" "Génération docker-compose.yml"
 
-    local LISTMONK_SERVICE
-    if [[ "$INSTALL_LISTMONK" == "oui" ]]; then
-        LISTMONK_SERVICE="
+    # Listmonk — toujours installé
+    local LISTMONK_SERVICE="
   listmonk:
     image: listmonk/listmonk:v6.1.0
     container_name: saaskit-listmonk
@@ -382,8 +402,70 @@ _install_generate_compose() {
       start_period: 30s
     logging:
       options: {max-size: \"10m\", max-file: \"3\"}"
-    else
-        LISTMONK_SERVICE="  # Listmonk non installé"
+
+    # Logto — toujours installé
+    local LOGTO_SERVICE="
+  logto:
+    image: svhd/logto:latest
+    container_name: saaskit-logto
+    restart: unless-stopped
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - 'npm run cli db seed -- --swe 2>/dev/null; npm start'
+    ports:
+      - \"127.0.0.1:${PORT_LOGTO}:3001\"
+      - \"127.0.0.1:${PORT_LOGTO_ADMIN}:3002\"
+    environment:
+      TRUST_PROXY_HEADER: 1
+      DB_URL: postgresql://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/logto_db
+      ENDPOINT: https://\${LOGTO_DOMAIN}
+      ADMIN_ENDPOINT: http://127.0.0.1:${PORT_LOGTO_ADMIN}
+    networks:
+      - saaskit-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: [\"CMD-SHELL\", \"wget --quiet --tries=1 --spider http://localhost:3001/api/status || exit 1\"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      options: {max-size: \"10m\", max-file: \"3\"}"
+
+    # Pocket TTS — optionnel
+    local TTS_SERVICE="  # Pocket TTS non installé"
+    if [[ "$INSTALL_TTS" == "oui" ]]; then
+        TTS_SERVICE="
+  tts:
+    image: kyutai/pocket-tts:latest
+    container_name: saaskit-tts
+    restart: unless-stopped
+    ports:
+      - \"127.0.0.1:${PORT_TTS}:8000\"
+    command: [\"pocket-tts\", \"serve\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]
+    environment:
+      HF_TOKEN: \${HF_TOKEN}
+      HF_HOME: /data/hf-cache
+    volumes:
+      - ${DATA_DIR}/tts:/data
+    networks:
+      - saaskit-net
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    healthcheck:
+      test: [\"CMD-SHELL\", \"wget --quiet --tries=1 --spider http://localhost:8000/health || exit 1\"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    logging:
+      options: {max-size: \"10m\", max-file: \"3\"}"
     fi
 
     # ARCH1 : bloc Caddy conditionnel (standalone uniquement)
@@ -636,6 +718,10 @@ ${CADDY_SVC_BLOCK}
 
 ${LISTMONK_SERVICE}
 
+${LOGTO_SERVICE}
+
+${TTS_SERVICE}
+
 networks:
   saaskit-net:
     name: saaskit-net
@@ -669,17 +755,17 @@ _install_configure_proxy() {
         if grep -q "saas-kit — n8n" "$CADDYFILE" 2>/dev/null; then
             log_warn "Blocs saas-kit déjà présents — injection ignorée."
         else
-            local LISTMONK_CADDY_BLOCK=""
-            if [[ "$INSTALL_LISTMONK" == "oui" ]]; then
-                LISTMONK_CADDY_BLOCK="
-# ── saas-kit — Listmonk ─────────────────────────────────────────────────────
-${LISTMONK_DOMAIN} {
-  reverse_proxy 127.0.0.1:${PORT_LISTMONK} {
+            local TTS_CADDY_BLOCK=""
+            if [[ "$INSTALL_TTS" == "oui" ]]; then
+                TTS_CADDY_BLOCK="
+# ── saas-kit — Pocket TTS ────────────────────────────────────────────────────
+${TTS_DOMAIN} {
+  reverse_proxy 127.0.0.1:${PORT_TTS} {
     header_up Host \{host}
     header_up X-Real-IP \{remote_host}
     header_up X-Forwarded-Proto \{scheme}
   }
-  header { Strict-Transport-Security \"max-age=31536000\"; X-Frame-Options \"SAMEORIGIN\"; -Server }
+  header { Strict-Transport-Security \"max-age=31536000\"; -Server }
 }"
             fi
 
@@ -742,7 +828,27 @@ ${MINIO_CONSOLE_DOMAIN} {
   header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
 }
 
-${LISTMONK_CADDY_BLOCK}
+# ── saas-kit — Listmonk ─────────────────────────────────────────────────────
+${LISTMONK_DOMAIN} {
+  reverse_proxy 127.0.0.1:${PORT_LISTMONK} {
+    header_up Host \{host}
+    header_up X-Real-IP \{remote_host}
+    header_up X-Forwarded-Proto \{scheme}
+  }
+  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+}
+
+# ── saas-kit — Logto (auth OIDC) ─────────────────────────────────────────────
+${LOGTO_DOMAIN} {
+  reverse_proxy 127.0.0.1:${PORT_LOGTO} {
+    header_up Host \{host}
+    header_up X-Real-IP \{remote_host}
+    header_up X-Forwarded-Proto \{scheme}
+  }
+  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+}
+
+${TTS_CADDY_BLOCK}
 CADDYBLOCKS
             log_success "Blocs saas-kit injectés dans $CADDYFILE"
 
@@ -801,17 +907,29 @@ ${MINIO_CONSOLE_DOMAIN} {
   reverse_proxy saaskit-minio:9001
   header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
 }
-CADDYSTANDALONE
-
-        if [[ "$INSTALL_LISTMONK" == "oui" ]]; then
-            cat >> "$CADDYFILE" << CADDYLISTMONK
 
 # ── saas-kit — Listmonk ──────────────────────────────────────────────────────
 ${LISTMONK_DOMAIN} {
   reverse_proxy saaskit-listmonk:9000
   header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
 }
-CADDYLISTMONK
+
+# ── saas-kit — Logto (auth OIDC) ─────────────────────────────────────────────
+${LOGTO_DOMAIN} {
+  reverse_proxy saaskit-logto:3001
+  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+}
+CADDYSTANDALONE
+
+        if [[ "$INSTALL_TTS" == "oui" ]]; then
+            cat >> "$CADDYFILE" << CADDYTTS
+
+# ── saas-kit — Pocket TTS ───────────────────────────────────────────────────
+${TTS_DOMAIN} {
+  reverse_proxy saaskit-tts:8000
+  header { Strict-Transport-Security "max-age=31536000"; -Server }
+}
+CADDYTTS
         fi
 
         log_success "Caddyfile standalone généré : $CADDYFILE"
@@ -870,8 +988,9 @@ _install_start_containers() {
     done
 
     local FAILED=false
-    local SERVICES=(saaskit-postgres saaskit-dragonfly saaskit-redis saaskit-n8n saaskit-baserow saaskit-minio)
-    [[ "$INSTALL_LISTMONK" == "oui" ]] && SERVICES+=(saaskit-listmonk)
+    local SERVICES=(saaskit-postgres saaskit-dragonfly saaskit-redis saaskit-n8n \
+                    saaskit-baserow saaskit-minio saaskit-listmonk saaskit-logto)
+    [[ "$INSTALL_TTS" == "oui" ]] && SERVICES+=(saaskit-tts)
     [[ "$CADDY_MODE" == "standalone" ]] && SERVICES+=(saaskit-caddy)
 
     for svc in "${SERVICES[@]}"; do
@@ -951,8 +1070,14 @@ MINIO_USER="admin"
 MINIO_PASSWORD="${MINIO_PASSWORD}"
 POSTGRES_USER="saaskit"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD}"
-INSTALL_LISTMONK="${INSTALL_LISTMONK}"
+INSTALL_LISTMONK="oui"
 LISTMONK_DOMAIN="${LISTMONK_DOMAIN}"
+LOGTO_DOMAIN="${LOGTO_DOMAIN}"
+LOGTO_ADMIN_DOMAIN="${LOGTO_ADMIN_DOMAIN}"
+PORT_LOGTO="${PORT_LOGTO}"
+PORT_LOGTO_ADMIN="${PORT_LOGTO_ADMIN}"
+INSTALL_TTS="${INSTALL_TTS}"
+TTS_DOMAIN="${TTS_DOMAIN}"
 # ARCH1 : mode reverse proxy détecté à l'installation
 CADDY_MODE="${CADDY_MODE}"
 CADDY_CONTAINER="${CADDY_CONTAINER}"
@@ -1029,14 +1154,18 @@ HELPEREOF
     echo -e "  ${VERT}Baserow       :${RESET} https://${BASEROW_DOMAIN}"
     echo -e "  ${VERT}MinIO API     :${RESET} https://${MINIO_DOMAIN}"
     echo -e "  ${VERT}MinIO Console :${RESET} https://${MINIO_CONSOLE_DOMAIN}"
-    [[ "$INSTALL_LISTMONK" == "oui" ]] && echo -e "  ${VERT}Listmonk      :${RESET} https://${LISTMONK_DOMAIN}"
+    echo -e "  ${VERT}Listmonk      :${RESET} https://${LISTMONK_DOMAIN}"
+    echo -e "  ${VERT}Logto (auth)  :${RESET} https://${LOGTO_DOMAIN}"
+    [[ "$INSTALL_TTS" == "oui" ]] && echo -e "  ${VERT}Pocket TTS    :${RESET} https://${TTS_DOMAIN}"
     echo ""
     echo -e "  ${JAUNE}Post-install :${RESET}"
     echo -e "  1. sudo ./saaskit.sh keys"
     echo -e "  2. n8n : https://${N8N_DOMAIN} → ${ADMIN_EMAIL}"
     echo -e "  3. sudo saaskit-mcp-apikey.sh <clé_api_n8n>"
     echo -e "  4. Baserow : https://${BASEROW_DOMAIN} → créer compte"
-    [[ "$INSTALL_LISTMONK" == "oui" ]] && echo -e "  5. Listmonk : https://${LISTMONK_DOMAIN}/install"
+    echo -e "  5. Listmonk : https://${LISTMONK_DOMAIN}/install"
+    echo -e "  6. Logto admin : http://127.0.0.1:${PORT_LOGTO_ADMIN} (accès local uniquement)"
+    [[ "$INSTALL_TTS" == "oui" ]] && echo -e "  7. Pocket TTS : https://${TTS_DOMAIN} (premier démarrage ~2min, download modèle)"
     echo ""
     echo -e "${GRAS}${VERT}  Done. Stack prête sur https://${ROOT_DOMAIN}${RESET}"
     echo ""
@@ -1091,8 +1220,10 @@ cmd_keys() {
     echo -e "  Baserow       : ${VERT}https://${BASEROW_DOMAIN:-?}${RESET}"
     echo -e "  MinIO API     : ${VERT}https://${MINIO_DOMAIN:-?}${RESET}"
     echo -e "  MinIO Console : ${VERT}https://${MINIO_CONSOLE_DOMAIN:-?}${RESET}"
-    [[ "${INSTALL_LISTMONK:-non}" == "oui" ]] && \
-        echo -e "  Listmonk      : ${VERT}https://${LISTMONK_DOMAIN:-?}${RESET}"
+    echo -e "  Listmonk      : ${VERT}https://${LISTMONK_DOMAIN:-?}${RESET}"
+    echo -e "  Logto (auth)  : ${VERT}https://${LOGTO_DOMAIN:-?}${RESET}"
+    [[ "${INSTALL_TTS:-non}" == "oui" ]] && \
+        echo -e "  Pocket TTS    : ${VERT}https://${TTS_DOMAIN:-?}${RESET}"
     echo ""
     echo -e "  ${GRAS}Credentials :${RESET}"
     echo -e "  Admin email : ${VERT}${ADMIN_EMAIL:-?}${RESET}"
@@ -1154,9 +1285,7 @@ cmd_backup() {
 
     if [[ "$DO_POSTGRES" == "true" ]]; then
         log_info "Backup PostgreSQL..."
-        local DBS_TO_BACKUP=("n8n_db" "baserow_db")
-        local _lm; _lm=$(grep 'INSTALL_LISTMONK=' "$CONF" | cut -d'"' -f2 || echo "non")
-        [[ "$_lm" == "oui" ]] && DBS_TO_BACKUP+=("listmonk_db")
+        local DBS_TO_BACKUP=("n8n_db" "baserow_db" "listmonk_db" "logto_db")
 
         for db in "${DBS_TO_BACKUP[@]}"; do
             local DEST="$BACKUP_DIR/postgres_${db}_${TIMESTAMP}.sql.gz"
@@ -1261,7 +1390,7 @@ cmd_update() {
     fi
 
     local SPECIFIC="${2:-}"
-    local ALL_SERVICES=(postgres dragonfly redis n8n n8n-mcp baserow minio listmonk)
+    local ALL_SERVICES=(postgres dragonfly redis n8n n8n-mcp baserow minio listmonk logto tts)
 
     # ARCH1 : inclure caddy si mode standalone
     if [[ -z "$SPECIFIC" && -f "$CONF" ]]; then
@@ -1356,7 +1485,8 @@ EOF
     fi
 
     for ctn in saaskit-postgres saaskit-dragonfly saaskit-redis saaskit-n8n \
-               saaskit-n8n-mcp saaskit-baserow saaskit-minio saaskit-listmonk saaskit-caddy; do
+               saaskit-n8n-mcp saaskit-baserow saaskit-minio saaskit-listmonk \
+               saaskit-logto saaskit-tts saaskit-caddy; do
         docker ps -a --format '{{.Names}}' | grep -q "^${ctn}$" && \
             docker rm -f "$ctn" 2>/dev/null && log_info "  $ctn supprimé." || true
     done
