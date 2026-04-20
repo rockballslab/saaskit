@@ -17,7 +17,7 @@
 
 
 ```bash
-# Step 2 — install SAASKIT (5 min)
+# LAUNCH — install SAASKIT (5 min)
 curl -fsSL https://raw.githubusercontent.com/rockballslab/SAASKIT/main/saaskit.sh -o saaskit.sh
 chmod +x saaskit.sh && sudo ./saaskit.sh install
 ```
