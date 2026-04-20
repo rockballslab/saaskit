@@ -1334,6 +1334,13 @@ cmd_backup() {
 
     local EXTERNAL_CONF="$KIT_DIR/backup-external.conf"
     if [[ -f "$EXTERNAL_CONF" ]]; then
+        # FIX S4 : vérifier et corriger les permissions — fichier contient des clés S3
+        local _ext_perms
+        _ext_perms=$(stat -c '%a' "$EXTERNAL_CONF" 2>/dev/null || echo "644")
+        if [[ "$_ext_perms" != "600" && "$_ext_perms" != "400" ]]; then
+            log_warn "backup-external.conf : permissions trop larges (${_ext_perms}) — correction automatique en 600."
+            chmod 600 "$EXTERNAL_CONF"
+        fi
         local BACKUP_EXTERNAL_ENDPOINT BACKUP_EXTERNAL_ACCESS_KEY \
               BACKUP_EXTERNAL_SECRET_KEY BACKUP_EXTERNAL_BUCKET
         BACKUP_EXTERNAL_ENDPOINT=$(grep '^BACKUP_EXTERNAL_ENDPOINT=' "$EXTERNAL_CONF" | cut -d'=' -f2- | tr -d '"' || echo "")
