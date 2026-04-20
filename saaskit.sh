@@ -373,7 +373,7 @@ _install_generate_compose() {
     # Logto — toujours installé
     local LOGTO_SERVICE="
   logto:
-    image: svhd/logto:latest
+    image: svhd/logto:1.38.0
     container_name: saaskit-logto
     restart: unless-stopped
     entrypoint: /bin/sh
@@ -411,7 +411,7 @@ _install_generate_compose() {
     if [[ "$INSTALL_TTS" == "oui" ]]; then
         TTS_SERVICE="
   tts:
-    image: ghcr.io/kyutai-labs/pocket-tts:latest
+    image: ghcr.io/kyutai-labs/pocket-tts:v1.1.1
     container_name: saaskit-tts
     restart: unless-stopped
     ports:
@@ -440,7 +440,7 @@ _install_generate_compose() {
     # Uptime Kuma — toujours installé
     local UPTIME_SERVICE="
   uptime-kuma:
-    image: louislam/uptime-kuma:2
+    image: louislam/uptime-kuma:2.2.1    # FIX S— : SSTI GHSA-v832-4r73-wx5j (Mar 2026)
     container_name: saaskit-uptime-kuma
     restart: unless-stopped
     ports:
