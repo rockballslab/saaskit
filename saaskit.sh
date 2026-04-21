@@ -412,7 +412,7 @@ _install_generate_compose() {
     if [[ "$INSTALL_TTS" == "oui" ]]; then
         TTS_SERVICE="
   tts:
-    image: ghcr.io/kyutai-labs/pocket-tts:v1.1.1
+    image: ghcr.io/kyutai-labs/pocket-tts:v2.0.0
     container_name: saaskit-tts
     restart: unless-stopped
     ports:
