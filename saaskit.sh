@@ -308,7 +308,6 @@ _install_create_env() {
         [[ "$_pg_ans" == "oui" ]] || exit 1
     fi
 
-    chown -R 1000:1000 "$DATA_DIR/n8n" 2>/dev/null || true
     # FIX W2 : vérifier que ADMIN_USER existe avant chown
     if id "$ADMIN_USER" &>/dev/null; then
         chown -R "$ADMIN_USER:$ADMIN_USER" "$KIT_DIR" 2>/dev/null || true
@@ -316,6 +315,8 @@ _install_create_env() {
         log_warn "Utilisateur '$ADMIN_USER' non trouvé — chown KIT_DIR ignoré."
     fi
     log_success "Répertoires créés dans $KIT_DIR"
+    chown 999:999 "$DATA_DIR/dragonfly" "$DATA_DIR/redis" 2>/dev/null || true
+    chown -R 1000:1000 "$DATA_DIR/n8n" 2>/dev/null || true
 
     # FIX S1 : écriture .env avec umask restrictif dans sous-shell
     (
@@ -399,7 +400,7 @@ _install_generate_compose() {
       - no-new-privileges:true
     cap_drop: [ALL]
     healthcheck:
-      test: [\"CMD-SHELL\", \"wget --quiet --tries=1 --spider http://localhost:3001/api/status || exit 1\"]
+      test: [\"CMD-SHELL\", \"curl -sf http://localhost:3001/api/status || exit 1\"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -453,8 +454,9 @@ _install_generate_compose() {
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETUID, SETGID, KILL]
     healthcheck:
-      test: [\"CMD-SHELL\", \"wget --quiet --tries=1 --spider http://localhost:3001/ || exit 1\"]
+      test: [\"CMD-SHELL\", \"curl -sf http://localhost:3001/ || exit 1\"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -514,7 +516,7 @@ services:
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
-    cap_add: [CHOWN, SETUID, SETGID]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETUID, SETGID, KILL]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \${POSTGRES_USER}"]
       interval: 10s
@@ -536,6 +538,7 @@ services:
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
+    cap_add: [SETUID, SETGID]
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -p 6379 ping || exit 1"]
       interval: 10s
@@ -556,6 +559,7 @@ services:
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
+    cap_add: [SETUID, SETGID]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -608,7 +612,7 @@ services:
     cap_drop: [ALL]
     cap_add: [CHOWN, SETUID, SETGID]
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:5678/healthz || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:5678/healthz || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -618,7 +622,7 @@ services:
 
   # n8n-MCP — MCP server pour Claude (FIX B6 : N8N_API_KEY via saaskit-mcp-apikey.sh)
   n8n-mcp:
-    image: ghcr.io/czlonkowski/n8n-mcp:v2.47.14
+    image: ghcr.io/czlonkowski/n8n-mcp:latest
     container_name: saaskit-n8n-mcp
     restart: unless-stopped
     ports:
@@ -640,7 +644,7 @@ services:
       - no-new-privileges:true
     cap_drop: [ALL]
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -653,7 +657,7 @@ services:
     container_name: saaskit-baserow
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${PORT_BASEROW}:80"
+      - "127.0.0.1:${PORT_BASEROW}:3000"
     environment:
       BASEROW_PUBLIC_URL: https://\${BASEROW_DOMAIN}
       DATABASE_URL: postgresql://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@postgres:5432/baserow_db
@@ -662,6 +666,7 @@ services:
       BASEROW_AMOUNT_OF_WORKERS: 2
       MEDIA_URL: https://\${BASEROW_DOMAIN}/media/
       BASEROW_EXTRA_ALLOWED_HOSTS: \${BASEROW_DOMAIN}
+      BASEROW_CADDY_ADDRESSES: ""
     volumes:
       - ${DATA_DIR}/baserow:/baserow/data
     networks:
@@ -671,12 +676,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    security_opt:
-      - no-new-privileges:true
-    cap_drop: [ALL]
-    cap_add: [CHOWN, SETUID, SETGID]
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/api/_health/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -687,7 +688,7 @@ services:
   # MinIO — FIX S6 : CVE-2025-62506 patchée, FIX B4 : healthcheck HTTP
   # E1 FIX : alpine/minio non officiel (maintenu par un particulier) — migré sur quay.io/minio/minio
   minio:
-      image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z.hotfix.7aa24e772
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z.hotfix.7aa24e772
     container_name: saaskit-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -705,6 +706,7 @@ services:
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETUID, SETGID, KILL]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live || wget -qO /dev/null http://localhost:9000/minio/health/live 2>/dev/null || exit 1"]
       interval: 30s
@@ -765,7 +767,10 @@ ${TTS_DOMAIN} {
     header_up X-Real-IP {remote_host}
     header_up X-Forwarded-Proto {scheme}
   }
-  header { Strict-Transport-Security \"max-age=31536000\"; -Server }
+  header {
+    Strict-Transport-Security \"max-age=31536000\"
+    -Server
+  }
 }"
             fi
 
@@ -795,7 +800,11 @@ ${MCP_DOMAIN} {
     header_up X-Real-IP {remote_host}
     header_up X-Forwarded-Proto {scheme}
   }
-  header { Strict-Transport-Security "max-age=31536000"; X-Content-Type-Options "nosniff"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Content-Type-Options "nosniff"
+    -Server
+  }
 }
 
 # ── saas-kit — Baserow ───────────────────────────────────────────────────────
@@ -805,7 +814,11 @@ ${BASEROW_DOMAIN} {
     header_up X-Real-IP {remote_host}
     header_up X-Forwarded-Proto {scheme}
   }
-  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
 }
 
 # ── saas-kit — MinIO API ─────────────────────────────────────────────────────
@@ -815,7 +828,9 @@ ${MINIO_DOMAIN} {
     header_up X-Real-IP {remote_host}
     header_up X-Forwarded-Proto {scheme}
   }
-  header { -Server }
+  header {
+    -Server
+  }
 }
 
 # ── saas-kit — MinIO Console ─────────────────────────────────────────────────
@@ -825,7 +840,11 @@ ${MINIO_CONSOLE_DOMAIN} {
     header_up X-Real-IP {remote_host}
     header_up X-Forwarded-Proto {scheme}
   }
-  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
 }
 
 # ── saas-kit — Logto (auth OIDC) ─────────────────────────────────────────────
@@ -835,7 +854,11 @@ ${LOGTO_DOMAIN} {
     header_up X-Real-IP {remote_host}
     header_up X-Forwarded-Proto {scheme}
   }
-  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
 }
 
 # ── saas-kit — Uptime Kuma (status) ──────────────────────────────────────────
@@ -845,7 +868,11 @@ ${UPTIME_DOMAIN} {
     header_up X-Real-IP {remote_host}
     header_up X-Forwarded-Proto {scheme}
   }
-  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
 }
 
 ${TTS_CADDY_BLOCK}
@@ -854,6 +881,7 @@ CADDYBLOCKS
 
             if ! docker exec "$CADDY_CONTAINER" caddy validate --config /etc/caddy/Caddyfile 2>/dev/null; then
                 log_error "Caddyfile invalide ! Restauration backup..."
+                cp "$CADDYFILE" /tmp/caddyfile_injected_debug.txt
                 cp "$CADDYFILE_BACKUP" "$CADDYFILE"
                 exit 1
             fi
@@ -881,43 +909,68 @@ CADDYBLOCKS
 # ── saas-kit — n8n ───────────────────────────────────────────────────────────
 ${N8N_DOMAIN} {
   reverse_proxy saaskit-n8n:5678
-  header { Strict-Transport-Security "max-age=31536000; includeSubDomains"; X-Frame-Options "SAMEORIGIN"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
 }
 
 # ── saas-kit — n8n-MCP ───────────────────────────────────────────────────────
 ${MCP_DOMAIN} {
   reverse_proxy saaskit-n8n-mcp:3000
-  header { Strict-Transport-Security "max-age=31536000"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    -Server
+  }
 }
 
 # ── saas-kit — Baserow ───────────────────────────────────────────────────────
 ${BASEROW_DOMAIN} {
-  reverse_proxy saaskit-baserow:80
-  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+  reverse_proxy saaskit-baserow:3000
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
 }
 
 # ── saas-kit — MinIO API ─────────────────────────────────────────────────────
 ${MINIO_DOMAIN} {
   reverse_proxy saaskit-minio:9000
-  header { -Server }
+  header {
+    -Server
+  }
 }
 
 # ── saas-kit — MinIO Console ─────────────────────────────────────────────────
 ${MINIO_CONSOLE_DOMAIN} {
   reverse_proxy saaskit-minio:9001
-  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
 }
 
 # ── saas-kit — Logto (auth OIDC) ─────────────────────────────────────────────
 ${LOGTO_DOMAIN} {
   reverse_proxy saaskit-logto:3001
-  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
 }
 
 # ── saas-kit — Uptime Kuma (status) ──────────────────────────────────────────
 ${UPTIME_DOMAIN} {
   reverse_proxy saaskit-uptime-kuma:3001
-  header { Strict-Transport-Security "max-age=31536000"; X-Frame-Options "SAMEORIGIN"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Frame-Options "SAMEORIGIN"
+    -Server
+  }
 }
 CADDYSTANDALONE
 
@@ -927,7 +980,10 @@ CADDYSTANDALONE
 # ── saas-kit — Pocket TTS ───────────────────────────────────────────────────
 ${TTS_DOMAIN} {
   reverse_proxy saaskit-tts:8000
-  header { Strict-Transport-Security "max-age=31536000"; -Server }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    -Server
+  }
 }
 CADDYTTS
         fi
