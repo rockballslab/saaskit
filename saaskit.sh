@@ -618,7 +618,7 @@ services:
 
   # n8n-MCP — MCP server pour Claude (FIX B6 : N8N_API_KEY via saaskit-mcp-apikey.sh)
   n8n-mcp:
-    image: ghcr.io/czlonkowski/n8n-mcp:v2.47.12
+    image: ghcr.io/czlonkowski/n8n-mcp:v2.47.14
     container_name: saaskit-n8n-mcp
     restart: unless-stopped
     ports:
