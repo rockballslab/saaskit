@@ -1229,6 +1229,35 @@ HELPEREOF
     echo -e "  6. Uptime Kuma : https://${UPTIME_DOMAIN} → créer compte admin"
     [[ "$INSTALL_TTS" == "oui" ]] && echo -e "  7. Pocket TTS : https://${TTS_DOMAIN} (premier démarrage ~2min, download modèle)"
     echo ""
+
+    # ── VPS-SECURE : Enregistrement des ports SaaSKit ────────────
+    EXPECTED_PORTS_FILE="/etc/vps-secure/expected-ports.conf"
+    # /etc/vps-secure/ existe déjà (créé plus haut dans cette fonction)
+    
+    SAASKIT_PORTS=(
+        "$PORT_N8N"           # n8n
+        "$PORT_MCP"           # n8n-MCP
+        "$PORT_BASEROW"       # Baserow
+        "$PORT_MINIO_API"     # MinIO API
+        "$PORT_MINIO_CONSOLE" # MinIO Console
+        "$PORT_LOGTO"         # Logto OIDC
+        "$PORT_LOGTO_ADMIN"   # Logto admin
+        "$PORT_UPTIME"        # Uptime Kuma
+    )
+    [[ "$INSTALL_TTS" == "oui" ]] && SAASKIT_PORTS+=("$PORT_TTS")
+    
+    if [[ -f "$EXPECTED_PORTS_FILE" ]]; then
+        for port in "${SAASKIT_PORTS[@]}"; do
+            grep -qxF "$port" "$EXPECTED_PORTS_FILE" 2>/dev/null || \
+                echo "$port" >> "$EXPECTED_PORTS_FILE"
+        done
+        log_success "Ports SaaSKit enregistrés dans VPS-SECURE dashboard."
+    else
+        log_info "VPS-SECURE non détecté — whitelist ports ignorée."
+    fi
+    
+    # ══ FIN DU BLOC ══════════════════════════════════════════════
+    
     echo -e "${GRAS}${VERT}  Done. Stack prête sur https://${ROOT_DOMAIN}${RESET}"
     echo ""
 }
