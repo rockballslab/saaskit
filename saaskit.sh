@@ -1150,7 +1150,7 @@ HELPEREOF
         "$PORT_UPTIME"        # Uptime Kuma
     )
     
-    if [[ -f "$EXPECTED_PORTS_FILE" ]]; then
+    if [[ -d "/etc/vps-secure" ]]; then
         for port in "${SAASKIT_PORTS[@]}"; do
             grep -qxF "$port" "$EXPECTED_PORTS_FILE" 2>/dev/null || \
                 echo "$port" >> "$EXPECTED_PORTS_FILE"
