@@ -94,8 +94,6 @@ Because the tools you already pay for every month have a free, production-grade,
 | **[Uptime Kuma](https://uptime.kuma.pet)** | Uptime monitoring + public status page - know before your users do | Pingdom, UptimeRobot |
 | **[Claude Code](https://claude.ai/code)** | AI coding CLI, pre-connected to your stack via MCP | GitHub Copilot, Cursor |
 
-**Optional:** [Pocket TTS](https://github.com/kyutai-labs/pocket-tts) - local CPU voice synthesis (100M params, no GPU needed). Install during setup when prompted.
-
 **Bonus:** 100+ n8n workflow templates + the n8n-skills Claude Code skillset - cloned locally at install.
 
 ---
@@ -190,8 +188,7 @@ chmod +x saaskit.sh && sudo ./saaskit.sh install
 
 > [!NOTE]
 > Tested on Hostinger KVM2 (16GB RAM, 8 vCPU, 200GB NVMe). Total install time: ~8 minutes.
->
-> If you install Pocket TTS (optional), add ~1 GB RAM and ~500 MB disk for the model. First boot downloads the model from HuggingFace (~400 MB).
+
 
 ### DNS records (required before install)
 
@@ -206,7 +203,6 @@ minio-console.<yourdomain.com>  → YOUR_VPS_IP
 listmonk.<yourdomain.com>       → YOUR_VPS_IP
 auth.<yourdomain.com>           → YOUR_VPS_IP
 status.<yourdomain.com>         → YOUR_VPS_IP
-tts.<yourdomain.com>            → YOUR_VPS_IP   # only if installing Pocket TTS
 ```
 
 > [!TIP]
@@ -221,7 +217,6 @@ The script is **fully interactive** and guides you at every step:
 ```
   Domain root (ex: mydomain.com)                          :
   Admin email                                             :
-  Install Pocket TTS (local voice synthesis, optional)?   :
 ```
 
 Listmonk, Logto and Uptime Kuma are installed automatically - no prompt needed. Everything else is generated automatically - database passwords, encryption keys, MCP authentication token. All credentials are saved to `/etc/vps-secure/saas-kit.conf` (readable only by root).
@@ -230,7 +225,7 @@ Listmonk, Logto and Uptime Kuma are installed automatically - no prompt needed. 
 
 ```
 [1/9] Prerequisites    - detects Docker, reverse proxy mode (inject or standalone)
-[2/9] Configuration    - prompts for domain + email + Pocket TTS, generates all secrets
+[2/9] Configuration    - prompts for domain + email, generates all secrets
 [3/9] DNS check        - verifies all subdomains resolve to this VPS
 [4/9] Environment      - creates /opt/saas-kit/, .env (chmod 600), init SQL (4 databases)
 [5/9] docker-compose   - generates compose file with pinned image versions
@@ -387,9 +382,9 @@ n8n-MCP uses the standard HTTP+SSE transport. Any MCP-compatible client works:
          │                │
    saaskit-n8n-mcp   saaskit-minio
          │
-         └──────────── saaskit-net (Docker bridge) ──────────────┐
-                         │              │             │           │
-                  saaskit-postgres  dragonfly      redis    (saaskit-tts)
+         └──────────── saaskit-net (Docker bridge) ───┐
+                         │              │             │           
+                  saaskit-postgres  dragonfly      redis   
 ```
 
 All SAASKIT containers communicate on `saaskit-net`. All public services are bound to `127.0.0.1` and proxied through Caddy with automatic HTTPS. The Logto admin console (port 3002) is local-only - never exposed publicly.
@@ -497,7 +492,6 @@ The skill auto-triggers when Claude Code is working in this project and provides
 | Logto (OIDC) | 127.0.0.1 | 3001 | Proxied by Caddy |
 | Logto (admin) | 127.0.0.1 | 3002 | Local only - access via SSH tunnel |
 | Uptime Kuma | 127.0.0.1 | 5684 | Proxied by Caddy - status page public |
-| Pocket TTS | 127.0.0.1 | 5683 | Optional - proxied by Caddy if installed |
 | PostgreSQL | internal only | 5432 | Not exposed externally |
 | Dragonfly | internal only | 6379 | n8n cache - not exposed |
 | Redis | internal only | 6379 | Baserow cache - not exposed |
@@ -519,7 +513,6 @@ The skill auto-triggers when Claude Code is working in this project and provides
 - [DragonflyDB](https://dragonflydb.io) - Redis-compatible in-memory store
 - [Logto](https://logto.io) - open-source OIDC/OAuth2 auth & identity
 - [Uptime Kuma](https://uptime.kuma.pet) - self-hosted uptime monitoring & status pages
-- [Kyutai Pocket TTS](https://github.com/kyutai-labs/pocket-tts) - lightweight CPU voice synthesis (optional)
 - [Caddy](https://caddyserver.com) - automatic HTTPS reverse proxy
 - [awesome-n8n-templates](https://github.com/enescingoz/awesome-n8n-templates) - community workflow templates
 - [n8n-skills](https://github.com/czlonkowski/n8n-skills) - Claude Code skillset for n8n
