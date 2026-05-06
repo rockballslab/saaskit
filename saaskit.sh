@@ -404,7 +404,7 @@ _install_generate_compose() {
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 120s
     logging:
       options: {max-size: \"10m\", max-file: \"3\"}"
 
