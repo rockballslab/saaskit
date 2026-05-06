@@ -72,7 +72,6 @@ PORT_MINIO_CONSOLE=9001
 
 PORT_LOGTO=3001
 PORT_LOGTO_ADMIN=3002
-PORT_TTS=5683
 PORT_UPTIME=5684
 
 # ============================================================
@@ -210,17 +209,6 @@ _install_gather_config() {
     read -rp "  Email admin : " ADMIN_EMAIL
     [[ ! "$ADMIN_EMAIL" =~ ^[^@]+@[^@]+\.[^@]+$ ]] && { log_error "Email invalide."; exit 1; }
 
-    echo ""
-    read -rp "  Installer Pocket TTS (synthèse vocale locale, optionnel) ? (oui/non) : " INSTALL_TTS
-    INSTALL_TTS="${INSTALL_TTS:-non}"
-
-    if [[ "$INSTALL_TTS" == "oui" ]]; then
-        read -rp "  HuggingFace token (requis pour Pocket TTS, voir hf.co/settings/tokens) : " HF_TOKEN
-        [[ -z "$HF_TOKEN" ]] && { log_error "HF_TOKEN obligatoire pour Pocket TTS."; exit 1; }
-    else
-        HF_TOKEN=""
-    fi
-
     log_info "Génération des secrets..."
     # E2 FIX : base64 48 → ~36 alphanum après tr-dc → head -c 20 toujours satisfait
     N8N_PASSWORD=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 20)
@@ -238,7 +226,6 @@ _install_gather_config() {
     MINIO_CONSOLE_DOMAIN="minio-console.${ROOT_DOMAIN}"
     LOGTO_DOMAIN="auth.${ROOT_DOMAIN}"
     LOGTO_ADMIN_DOMAIN="auth-admin.${ROOT_DOMAIN}"
-    TTS_DOMAIN="tts.${ROOT_DOMAIN}"
     UPTIME_DOMAIN="status.${ROOT_DOMAIN}"
 
     echo ""
@@ -247,10 +234,8 @@ _install_gather_config() {
               "$MINIO_CONSOLE_DOMAIN" "$LOGTO_DOMAIN" "$UPTIME_DOMAIN"; do
         echo -e "  ${BLANC}$d${RESET}"
     done
-    [[ "$INSTALL_TTS" == "oui" ]] && echo -e "  ${BLANC}$TTS_DOMAIN${RESET}"
     echo ""
     log_warn "Logto (auth OIDC) et Uptime Kuma (monitoring) sont installés automatiquement."
-    log_warn "Pocket TTS : $([ "$INSTALL_TTS" == "oui" ] && echo "OUI" || echo "non")"
     log_success "Secrets générés."
 
     # ── Étape 2 : DNS ────────────────────────────────────────
@@ -267,7 +252,6 @@ _install_check_dns() {
 
     local DOMAINS_TO_CHECK=("$N8N_DOMAIN" "$MCP_DOMAIN" "$BASEROW_DOMAIN" "$MINIO_DOMAIN" \
                              "$MINIO_CONSOLE_DOMAIN" "$LOGTO_DOMAIN" "$UPTIME_DOMAIN")
-    [[ "$INSTALL_TTS" == "oui" ]] && DOMAINS_TO_CHECK+=("$TTS_DOMAIN")
 
     local DNS_OK=true
     for domain in "${DOMAINS_TO_CHECK[@]}"; do
@@ -298,7 +282,7 @@ _install_create_env() {
     mkdir -p "$KIT_DIR"
     mkdir -p "$DATA_DIR/postgres" "$DATA_DIR/dragonfly" "$DATA_DIR/redis" \
              "$DATA_DIR/n8n" "$DATA_DIR/baserow" "$DATA_DIR/minio" \
-             "$DATA_DIR/logto" "$DATA_DIR/tts" \
+             "$DATA_DIR/logto" \
              "$DATA_DIR/uptime-kuma" \
              "$KIT_DIR/templates" "$KIT_DIR/initdb"
 
@@ -345,10 +329,6 @@ MINIO_ROOT_USER=admin
 MINIO_ROOT_PASSWORD=${MINIO_PASSWORD}
 PORT_LOGTO=${PORT_LOGTO}
 PORT_LOGTO_ADMIN=${PORT_LOGTO_ADMIN}
-INSTALL_TTS=${INSTALL_TTS}
-HF_TOKEN=${HF_TOKEN}
-TTS_DOMAIN=${TTS_DOMAIN}
-PORT_TTS=${PORT_TTS}
 UPTIME_DOMAIN=${UPTIME_DOMAIN}
 PORT_UPTIME=${PORT_UPTIME}
 KIT_DIR=${KIT_DIR}
@@ -408,36 +388,6 @@ _install_generate_compose() {
     logging:
       options: {max-size: \"10m\", max-file: \"3\"}"
 
-    # Pocket TTS — optionnel
-    local TTS_SERVICE="  # Pocket TTS non installé"
-    if [[ "$INSTALL_TTS" == "oui" ]]; then
-        TTS_SERVICE="
-  tts:
-    image: ghcr.io/kyutai-labs/pocket-tts:v2.0.0
-    container_name: saaskit-tts
-    restart: unless-stopped
-    ports:
-      - \"127.0.0.1:${PORT_TTS}:8000\"
-    command: [\"pocket-tts\", \"serve\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]
-    environment:
-      HF_TOKEN: \${HF_TOKEN}
-      HF_HOME: /data/hf-cache
-    volumes:
-      - ${DATA_DIR}/tts:/data
-    networks:
-      - saaskit-net
-    security_opt:
-      - no-new-privileges:true
-    cap_drop: [ALL]
-    healthcheck:
-      test: [\"CMD-SHELL\", \"wget --quiet --tries=1 --spider http://localhost:8000/health || exit 1\"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
-    logging:
-      options: {max-size: \"10m\", max-file: \"3\"}"
-    fi
 
     # Uptime Kuma — toujours installé
     local UPTIME_SERVICE="
@@ -720,8 +670,6 @@ ${CADDY_SVC_BLOCK}
 
 ${LOGTO_SERVICE}
 
-${TTS_SERVICE}
-
 ${UPTIME_SERVICE}
 
 networks:
@@ -756,26 +704,6 @@ _install_configure_proxy() {
 
         if grep -q "saas-kit — n8n" "$CADDYFILE" 2>/dev/null; then
             log_warn "Blocs saas-kit déjà présents — injection ignorée."
-        else
-            local TTS_CADDY_BLOCK=""
-            if [[ "$INSTALL_TTS" == "oui" ]]; then
-                TTS_CADDY_BLOCK="
-# ── saas-kit — Pocket TTS ────────────────────────────────────────────────────
-${TTS_DOMAIN} {
-  reverse_proxy 127.0.0.1:${PORT_TTS} {
-    header_up Host {host}
-    header_up X-Real-IP {remote_host}
-    header_up X-Forwarded-Proto {scheme}
-  }
-  header {
-    Strict-Transport-Security \"max-age=31536000\"
-    -Server
-  }
-}"
-            fi
-
-            # FIX B7/B8 : heredoc non-quoté + placeholders Caddy escapés avec \{
-            cat >> "$CADDYFILE" << CADDYBLOCKS
 
 # ── saas-kit — n8n ───────────────────────────────────────────────────────────
 ${N8N_DOMAIN} {
@@ -875,7 +803,6 @@ ${UPTIME_DOMAIN} {
   }
 }
 
-${TTS_CADDY_BLOCK}
 CADDYBLOCKS
             log_success "Blocs saas-kit injectés dans $CADDYFILE"
 
@@ -974,23 +901,6 @@ ${UPTIME_DOMAIN} {
 }
 CADDYSTANDALONE
 
-        if [[ "$INSTALL_TTS" == "oui" ]]; then
-            cat >> "$CADDYFILE" << CADDYTTS
-
-# ── saas-kit — Pocket TTS ───────────────────────────────────────────────────
-${TTS_DOMAIN} {
-  reverse_proxy saaskit-tts:8000
-  header {
-    Strict-Transport-Security "max-age=31536000"
-    -Server
-  }
-}
-CADDYTTS
-        fi
-
-        log_success "Caddyfile standalone généré : $CADDYFILE"
-        log_info "saaskit-caddy démarrera avec les autres services à l'étape 6."
-    fi
 
     # ── Étape 6 : Démarrage containers ───────────────────────
 }
@@ -1047,7 +957,6 @@ _install_start_containers() {
     local SERVICES=(saaskit-postgres saaskit-dragonfly saaskit-redis saaskit-n8n \
                     saaskit-baserow saaskit-minio saaskit-logto \
                     saaskit-uptime-kuma)
-    [[ "$INSTALL_TTS" == "oui" ]] && SERVICES+=(saaskit-tts)
     [[ "$CADDY_MODE" == "standalone" ]] && SERVICES+=(saaskit-caddy)
 
     for svc in "${SERVICES[@]}"; do
@@ -1131,8 +1040,6 @@ LOGTO_DOMAIN="${LOGTO_DOMAIN}"
 LOGTO_ADMIN_DOMAIN="${LOGTO_ADMIN_DOMAIN}"
 PORT_LOGTO="${PORT_LOGTO}"
 PORT_LOGTO_ADMIN="${PORT_LOGTO_ADMIN}"
-INSTALL_TTS="${INSTALL_TTS}"
-TTS_DOMAIN="${TTS_DOMAIN}"
 UPTIME_DOMAIN="${UPTIME_DOMAIN}"
 PORT_UPTIME="${PORT_UPTIME}"
 # ARCH1 : mode reverse proxy détecté à l'installation
@@ -1218,7 +1125,6 @@ HELPEREOF
     echo -e "  ${VERT}MinIO Console :${RESET} https://${MINIO_CONSOLE_DOMAIN}"
     echo -e "  ${VERT}Logto (auth)  :${RESET} https://${LOGTO_DOMAIN}"
     echo -e "  ${VERT}Uptime Kuma   :${RESET} https://${UPTIME_DOMAIN}"
-    [[ "$INSTALL_TTS" == "oui" ]] && echo -e "  ${VERT}Pocket TTS    :${RESET} https://${TTS_DOMAIN}"
     echo ""
     echo -e "  ${JAUNE}Post-install :${RESET}"
     echo -e "  1. sudo ./saaskit.sh keys"
@@ -1227,7 +1133,6 @@ HELPEREOF
     echo -e "  4. Baserow : https://${BASEROW_DOMAIN} → créer compte"
     echo -e "  5. Logto admin : http://127.0.0.1:${PORT_LOGTO_ADMIN} (accès local uniquement)"
     echo -e "  6. Uptime Kuma : https://${UPTIME_DOMAIN} → créer compte admin"
-    [[ "$INSTALL_TTS" == "oui" ]] && echo -e "  7. Pocket TTS : https://${TTS_DOMAIN} (premier démarrage ~2min, download modèle)"
     echo ""
 
     # ── VPS-SECURE : Enregistrement des ports SaaSKit ────────────
@@ -1244,7 +1149,6 @@ HELPEREOF
         "$PORT_LOGTO_ADMIN"   # Logto admin
         "$PORT_UPTIME"        # Uptime Kuma
     )
-    [[ "$INSTALL_TTS" == "oui" ]] && SAASKIT_PORTS+=("$PORT_TTS")
     
     if [[ -f "$EXPECTED_PORTS_FILE" ]]; then
         for port in "${SAASKIT_PORTS[@]}"; do
@@ -1313,8 +1217,6 @@ cmd_keys() {
     echo -e "  MinIO Console : ${VERT}https://${MINIO_CONSOLE_DOMAIN:-?}${RESET}"
     echo -e "  Logto (auth)  : ${VERT}https://${LOGTO_DOMAIN:-?}${RESET}"
     echo -e "  Uptime Kuma   : ${VERT}https://${UPTIME_DOMAIN:-?}${RESET}"
-    [[ "${INSTALL_TTS:-non}" == "oui" ]] && \
-        echo -e "  Pocket TTS    : ${VERT}https://${TTS_DOMAIN:-?}${RESET}"
     echo ""
     echo -e "  ${GRAS}Credentials :${RESET}"
     echo -e "  Admin email : ${VERT}${ADMIN_EMAIL:-?}${RESET}"
@@ -1488,7 +1390,7 @@ cmd_update() {
     fi
 
     local SPECIFIC="${2:-}"
-    local ALL_SERVICES=(postgres dragonfly redis n8n n8n-mcp baserow minio logto uptime-kuma tts)
+    local ALL_SERVICES=(postgres dragonfly redis n8n n8n-mcp baserow minio logto uptime-kuma)
 
     # ARCH1 : inclure caddy si mode standalone
     if [[ -z "$SPECIFIC" && -f "$CONF" ]]; then
@@ -1584,7 +1486,7 @@ EOF
 
     for ctn in saaskit-postgres saaskit-dragonfly saaskit-redis saaskit-n8n \
                saaskit-n8n-mcp saaskit-baserow saaskit-minio \
-               saaskit-logto saaskit-uptime-kuma saaskit-tts saaskit-caddy; do
+               saaskit-logto saaskit-uptime-kuma saaskit saaskit-caddy; do
         docker ps -a --format '{{.Names}}' | grep -q "^${ctn}$" && \
             docker rm -f "$ctn" 2>/dev/null && log_info "  $ctn supprimé." || true
     done
