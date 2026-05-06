@@ -570,7 +570,7 @@ services:
 
   # n8n — automation workflows (FIX B5 : auth via N8N_DEFAULT_USER_*)
   n8n:
-    image: docker.n8n.io/n8nio/n8n:2.16.1
+    image: docker.n8n.io/n8nio/n8n:2.19.3
     container_name: saaskit-n8n
     restart: unless-stopped
     ports:
