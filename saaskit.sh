@@ -400,7 +400,7 @@ _install_generate_compose() {
       - no-new-privileges:true
     cap_drop: [ALL]
     healthcheck:
-      test: [\"CMD-SHELL\", \"curl -sf http://localhost:3001/api/status || exit 1\"]
+      test: [\"CMD-SHELL\", \"wget -qO- http://localhost:3001/api/status > /dev/null 2>\&1 || exit 1\"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -612,11 +612,11 @@ services:
     cap_drop: [ALL]
     cap_add: [CHOWN, SETUID, SETGID]
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:5678/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz > /dev/null 2>\&1 || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 30s
+      retries: 5
+      start_period: 120s
     logging:
       options: {max-size: "10m", max-file: "3"}
 
