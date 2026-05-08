@@ -529,6 +529,19 @@ The skill auto-triggers when Claude Code is working in this project and provides
 
 ---
 
+## About VPS-SECURE
+
+A bare or default configured server is an easy, visible, and attackable target in minutes.
+
+VPS-Secure is not a simple installation script: it is an ultra-sturdy security foundation, designed to turn a naked VPS into a ready-made server and significantly better protected against attackers.
+
+<p align="center">
+  <img src="./media/saaskit_vpssecure.png" alt="VPS-SECURE" width="100%">
+</p>
+
+
+---
+
 ## License
 
 MIT - use it, fork it, build on it.
