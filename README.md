@@ -1,4 +1,4 @@
-<p align="left">
+<p align="center">
   <img src="./media/saaskit_banner.png" alt="SAASKIT" width="100%">
 </p>
 
@@ -62,6 +62,11 @@ Two years ago, I knew nothing about servers, APIs, or self-hosting. I was paying
 ## Why self-host your SaaS stack?
 
 Because the tools you already pay for every month have a free, production-grade, open-source equivalent - and they're better.
+
+<p align="center">
+  <img src="./media/saaskit_preview.png" alt="SAASKIT" width="100%">
+</p>
+
 
 | You probably pay for... | Self-hosted with SAASKIT | Monthly savings |
 |---|---|---|
