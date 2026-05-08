@@ -86,6 +86,11 @@ Because the tools you already pay for every month have a free, production-grade,
 
 ## What you get
 
+<p align="center">
+  <img src="./media/saaskit_tools.png" alt="SAASKIT" width="100%">
+</p>
+
+
 | Service | What it does | Open-source alternative to |
 |---|---|---|
 | **[n8n](https://n8n.io)** | Visual workflow automation - APIs, webhooks, AI agents | Zapier, Make, n8n Cloud |
