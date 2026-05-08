@@ -544,6 +544,7 @@ VPS-Secure is not a simple installation script: it is an ultra-sturdy security f
 </p>
 
 
+More informations: https://github.com/rockballslab/vps-secure
 
 ---
 
