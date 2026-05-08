@@ -25,8 +25,8 @@ chmod +x saaskit.sh && sudo ./saaskit.sh install
 
 ---
 
-<p align="left">
-  <img src="./saaskit.png" alt="The essential Kit for Starters and Builders" width="100%">
+<p align="center">
+  <img src="./media/saaskit_hero.png" alt="The essential Kit for Starters and Builders" width="100%">
 </p>
 
 ---
