@@ -1,5 +1,5 @@
 <p align="left">
-  <img src="./saaskit_logo.png" alt="SAASKIT" width="100%">
+  <img src="./media/saaskit_banner.png" alt="SAASKIT" width="100%">
 </p>
 
 ---
