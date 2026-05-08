@@ -529,7 +529,7 @@ The skill auto-triggers when Claude Code is working in this project and provides
 
 ---
 
-## About VPS-SECURE
+## About VPS-SECURE and why you should hardly secure your VPS
 
 A bare or default configured server is an easy, visible, and attackable target in minutes.
 
