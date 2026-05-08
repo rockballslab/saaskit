@@ -539,6 +539,11 @@ VPS-Secure is not a simple installation script: it is an ultra-sturdy security f
   <img src="./media/saaskit_vpssecure.png" alt="VPS-SECURE" width="100%">
 </p>
 
+<p align="center">
+  <img src="./media/VPS-SECURE_overview.png" alt="VPS-SECURE" width="100%">
+</p>
+
+
 
 ---
 
